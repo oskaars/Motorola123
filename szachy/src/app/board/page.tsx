@@ -4,8 +4,7 @@ import Chessboard from './components/Chessboard';
 const Board: NextPage = () => {
     return (
         <div>
-            <h1>Board</h1>
-            <div className="grid justify-center">
+            <div className="grid place-content-center h-screen bg-[#1a1a1a]">
                 <Chessboard />
             </div>    
         </div>
