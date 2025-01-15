@@ -9,15 +9,6 @@ interface Piece {
     y: number;
 }
 
-
-/*for(let i =0; i < 8; i++) {
-pieces.push({image: "pawns/BlackPawn.svg", x: i, y: 6})
-}*/
-
-/*for(let i =0; i < 8; i++) {
-    pieces.push({image: "pawns/WhitePawn.svg", x: i, y: 1})
-    } */
-
     const startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     const pieceImages = {
