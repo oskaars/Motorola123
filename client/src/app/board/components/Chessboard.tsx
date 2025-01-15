@@ -11,7 +11,33 @@ interface Piece {
 
 const pieces: Piece[] = [];
 
-pieces.push({iamge: "https://raw.githubusercontent.com/oskaars/Motorola123/943156290e64e61048f3e32a081cd990dee12e92/client/src/app/board/pawns/BlackPawn.svg?token=BHZ2SHK23OMCUUF7DU2EPX3HQ7OEU", x: 0, y: 1})
+for(let i =0; i < 8; i++) {
+pieces.push({image: "pawns/BlackPawn.svg", x: i, y: 6})
+}
+
+for(let i =0; i < 8; i++) {
+    pieces.push({image: "pawns/WhitePawn.svg", x: i, y: 1})
+    }
+
+pieces.push({image: "pawns/BlackRook.svg", x: 0, y: 7})
+pieces.push({image: "pawns/BlackRook.svg", x: 7, y: 7})
+pieces.push({image: "pawns/BlackKnightsvg", x: 1, y: 7})
+pieces.push({image: "pawns/BlackKnight.svg", x: 6, y: 7})
+pieces.push({image: "pawns/BlackBishop.svg", x: 2, y: 7})
+pieces.push({image: "pawns/BlackBishop.svg", x: 5, y: 7})
+pieces.push({image: "pawns/BlackQueen.svg", x: 3, y: 7})
+pieces.push({image: "pawns/BlackKing.svg", x: 4, y: 7})
+
+pieces.push({image: "pawns/WhiteRook.svg", x: 0, y: 0})
+pieces.push({image: "pawns/WhiteRook.svg", x: 7, y: 0})
+pieces.push({image: "pawns/WhiteKnightsvg", x: 1, y: 0})
+pieces.push({image: "pawns/WhiteKnight.svg", x: 6, y: 0})
+pieces.push({image: "pawns/WhiteBishop.svg", x: 2, y: 0})
+pieces.push({image: "pawns/WhiteBishop.svg", x: 5, y: 0})
+pieces.push({image: "pawns/WhiteQueen.svg", x: 3, y: 0})
+pieces.push({image: "pawns/WhiteKing.svg", x: 4, y: 0})
+
+
 
 export default function Chessboard() {
     let board = [];
@@ -22,6 +48,9 @@ export default function Chessboard() {
             let image = undefined;
 
             pieces.forEach(p => {
+                if(p.x === i && p.y === j) {
+                    image = p.image;
+                }
             })
 
             board.push(<Tile image={image} number={number} />)
