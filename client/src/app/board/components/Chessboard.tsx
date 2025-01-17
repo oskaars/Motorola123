@@ -1,3 +1,5 @@
+"use client";
+import React from "react";
 import Tile from "./Tile";
 
 const verticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
@@ -49,6 +51,37 @@ interface Piece {
         return pieces;
     }
 
+    let activePiece: HTMLElement | null = null;
+
+    function grabPiece(e: React.MouseEvent) {
+        const element = e.target as HTMLElement;
+        if(element.classList.contains('chess-piece')) {
+            const x = e.clientX -50;
+            const y = e.clientY -50;
+            element.style.position = 'absolute';
+            element.style.left = `${x}px`;
+            element.style.top = `${y}px`;
+
+            activePiece = element;
+        }
+    }
+
+    function movePiece(e: React.MouseEvent) {
+     if(activePiece && activePiece.classList.contains('chess-piece')) {
+            const x = e.clientX -50;
+            const y = e.clientY -50;
+            activePiece.style.position = 'absolute';
+            activePiece.style.left = `${x}px`;
+            activePiece.style.top = `${y}px`;
+        }
+    }
+
+    function droppedPiece(e: React.MouseEvent) {
+        if(activePiece) {
+            activePiece = null;
+        }
+    }
+
 export default function Chessboard() {
     const pieces = loadPositionFromFEN(startFEN);
     let board = [];
@@ -67,5 +100,12 @@ export default function Chessboard() {
             board.push(<Tile key={`${i},${j}`} image={image} number={number} />)
         }
     }
-    return <div className="bg-[#ff0000] w-[800px] h-[800px] grid grid-cols-8 text-black">{board}</div>
+    return <div
+    onMouseMove={(e) => movePiece(e)}
+    onMouseDown={(e) => grabPiece(e)}
+    onMouseUp={(e) => droppedPiece(e)}
+    className="bg-[#ff0000] w-[800px] h-[800px] grid grid-cols-8 text-black"
+    >
+        {board}
+    </div>
 }
