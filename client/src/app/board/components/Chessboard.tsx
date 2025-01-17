@@ -64,7 +64,7 @@ export default function Chessboard() {
                 }
             })
 
-            board.push(<Tile image={image} number={number} />)
+            board.push(<Tile key={`${i},${j}`} image={image} number={number} />)
         }
     }
     return <div className="bg-[#ff0000] w-[800px] h-[800px] grid grid-cols-8 text-black">{board}</div>
