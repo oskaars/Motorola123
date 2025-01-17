@@ -154,7 +154,7 @@ export default function Chessboard() {
                         fen += emptyCount; 
                         emptyCount = 0;
                     }
-                    fen += pieceChar; // Append the correct character for the piece
+                    fen += pieceChar;
                 } else {
                     emptyCount++;
                 }
