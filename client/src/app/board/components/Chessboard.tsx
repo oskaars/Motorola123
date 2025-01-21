@@ -1,14 +1,31 @@
 "use client";
 import React, { JSX, useRef, useState } from "react";
 import Tile from "./Tile";
+import Referee from "../referee/referee";
 
 const verticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
 const horizontalAxis = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
-interface Piece {
+export interface Piece {
     image: string;
     x: number;
     y: number;
+    type: PieceType;
+    team: TeamType;
+}
+
+export enum PieceType {
+    PAWN,
+    ROOK,
+    KNIGHT,
+    BISHOP,
+    QUEEN,
+    KING
+}
+
+export enum TeamType {
+    OUR,
+    OPPONENTS
 }
 
 const startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -43,12 +60,38 @@ function loadPositionFromFEN(fen: string): Piece[] {
         } else {
             const image = pieceImages[symbol as keyof typeof pieceImages];
             if (image) {
-                pieces.push({ image, x: file, y: rank });
+                const team = rank < 2 ? TeamType.OUR : TeamType.OPPONENTS;
+                pieces.push({ image, x: file, y: rank, type: getPieceType(symbol), team });
             }
             file++;
         }
     }
     return pieces;
+}
+
+function getPieceType(symbol: string): PieceType {
+    switch (symbol) { 
+        case 'p':
+        case 'P':
+            return PieceType.PAWN;
+        case 'r':
+        case 'R':
+            return PieceType.ROOK;
+        case 'n':
+        case 'N':
+            return PieceType.KNIGHT;
+        case 'b':
+        case 'B':
+            return PieceType.BISHOP;
+        case 'q':
+        case 'Q':
+            return PieceType.QUEEN;
+        case 'k':
+        case 'K':
+            return PieceType.KING;
+        default:
+            throw new Error(`Unknown piece symbol: ${symbol}`);
+    }
 }
 
 export default function Chessboard() {
@@ -57,7 +100,8 @@ export default function Chessboard() {
     const [gridX, setGridX] = useState(0);
     const [gridY, setGridY] = useState(0);
     const chessboardRef = useRef<HTMLDivElement>(null);
-    
+    const referee = new Referee();
+
     function grabPiece(e: React.MouseEvent) {
         const element = e.target as HTMLElement;
         const chessboard = chessboardRef.current;
@@ -87,19 +131,28 @@ export default function Chessboard() {
     function droppedPiece(e: React.MouseEvent) {
         const chessboard = chessboardRef.current;
         if (activePiece && chessboard) {
-            const x = Math.floor((e.clientX - chessboard.offsetLeft) / 100); 
+            const x = Math.floor((e.clientX - chessboard.offsetLeft) / 100);
             const y = Math.abs(Math.ceil((e.clientY - chessboard.offsetTop - 800) / 100));
 
-            setPieces((prevPieces) => 
-                prevPieces.map((piece) => 
-                    (piece.x === gridX && piece.y === gridY)
-                        ? { ...piece, x, y }
-                        : piece
-                )
-            );
+            const pieceToMove = pieces.find(piece => piece.x === gridX && piece.y === gridY);
+            if (pieceToMove) {
+                const validMove = referee.isValidMove(gridX, gridY, x, y, pieceToMove.type, pieceToMove.team, pieces)
+                if (validMove) {
+                    setPieces(prevPieces => 
+                        prevPieces.map(piece =>
+                            piece.x === gridX && piece.y === gridY ? { ...piece, x, y } : piece
+                        )
+                    );
+                } else {
+                    activePiece.style.position = 'relative';
+                    activePiece.style.removeProperty('top');
+                    activePiece.style.removeProperty('left');
+                }
+            }
             setActivePiece(null);
         }
     }
+    
 
     function generateFEN(pieces: Piece[]): string {
         let fen = '';
@@ -117,31 +170,31 @@ export default function Chessboard() {
                             pieceChar = 'P';
                             break;
                         case 'pawns/BlackRook.svg':
-                            pieceChar = 'r'; 
+                            pieceChar = 'r';
                             break;
                         case 'pawns/WhiteRook.svg':
-                            pieceChar = 'R'; 
+                            pieceChar = 'R';
                             break;
                         case 'pawns/BlackKnight.svg':
-                            pieceChar = 'n'; 
+                            pieceChar = 'n';
                             break;
                         case 'pawns/WhiteKnight.svg':
-                            pieceChar = 'N'; 
+                            pieceChar = 'N';
                             break;
                         case 'pawns/BlackBishop.svg':
                             pieceChar = 'b';
                             break;
                         case 'pawns/WhiteBishop.svg':
-                            pieceChar = 'B'; 
+                            pieceChar = 'B';
                             break;
                         case 'pawns/BlackQueen.svg':
                             pieceChar = 'q';
                             break;
                         case 'pawns/WhiteQueen.svg':
-                            pieceChar = 'Q'; 
+                            pieceChar = 'Q';
                             break;
                         case 'pawns/BlackKing.svg':
-                            pieceChar = 'k'; 
+                            pieceChar = 'k';
                             break;
                         case 'pawns/WhiteKing.svg':
                             pieceChar = 'K';
@@ -149,9 +202,9 @@ export default function Chessboard() {
                         default:
                             console.error('Unknown piece image:', piece.image);
                     }
-    
+
                     if (emptyCount > 0) {
-                        fen += emptyCount; 
+                        fen += emptyCount;
                         emptyCount = 0;
                     }
                     fen += pieceChar;
@@ -160,17 +213,17 @@ export default function Chessboard() {
                 }
             }
             if (emptyCount > 0) {
-                fen += emptyCount; 
+                fen += emptyCount;
             }
-            if (rank > 0) fen += '/'; 
+            if (rank > 0) fen += '/';
         }
-        return fen + ' w KQkq - 0 1'; 
+        return fen + ' w KQkq - 0 1';
     }
-    
+
     console.log(generateFEN(pieces));
-    
+
     let board: JSX.Element[] = [];
-    
+
     for (let j = verticalAxis.length - 1; j >= 0; j--) {
         for (let i = 0; i < horizontalAxis.length; i++) {
             const number = j + i + 2;
