@@ -133,16 +133,25 @@ export default function Chessboard() {
         if (activePiece && chessboard) {
             const x = Math.floor((e.clientX - chessboard.offsetLeft) / 100);
             const y = Math.abs(Math.ceil((e.clientY - chessboard.offsetTop - 800) / 100));
-
-            const pieceToMove = pieces.find(piece => piece.x === gridX && piece.y === gridY);
-            if (pieceToMove) {
-                const validMove = referee.isValidMove(gridX, gridY, x, y, pieceToMove.type, pieceToMove.team, pieces)
-                if (validMove) {
-                    setPieces(prevPieces => 
-                        prevPieces.map(piece =>
-                            piece.x === gridX && piece.y === gridY ? { ...piece, x, y } : piece
-                        )
-                    );
+    
+            const currentPiece = pieces.find(piece => piece.x === gridX && piece.y === gridY);
+            const attackedPiece = pieces.find(piece => piece.x === x && piece.y === y);
+    
+            if(currentPiece){
+                const validMove = referee.isValidMove(gridX, gridY, x, y, currentPiece.type, currentPiece.team, pieces);
+            
+                if(validMove){
+                    const updatedPieces = pieces.map(piece => {
+                        if(piece.x === currentPiece.x && piece.y === currentPiece.y) {
+                            return { ...piece, x, y };
+                        }
+                        if(!(piece.x === x && piece.y === y)) {
+                            return piece;
+                        }
+                        return null;
+                    }).filter((piece): piece is Piece => piece !== null);
+    
+                    setPieces(updatedPieces);
                 } else {
                     activePiece.style.position = 'relative';
                     activePiece.style.removeProperty('top');
@@ -220,7 +229,7 @@ export default function Chessboard() {
         return fen + ' w KQkq - 0 1';
     }
 
-    console.log(generateFEN(pieces));
+    // console.log(generateFEN(pieces));
 
     let board: JSX.Element[] = [];
 
