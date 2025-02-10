@@ -375,71 +375,75 @@ export default function Chessboard() {
     }
   }
 
-  function generateFEN(pieces: Piece[]): string {
+function generateFEN(pieces: Piece[]): string {
     let fen = "";
     for (let rank = 7; rank >= 0; rank--) {
-      let emptyCount = 0;
-      for (let file = 0; file < 8; file++) {
-        const piece = pieces.find((p) => p.x === file && p.y === rank);
-        if (piece) {
-          let pieceChar = "";
-          switch (piece.image) {
-            case "pawns/BlackPawn.svg":
-              pieceChar = "p";
-              break;
-            case "pawns/WhitePawn.svg":
-              pieceChar = "P";
-              break;
-            case "pawns/BlackRook.svg":
-              pieceChar = "r";
-              break;
-            case "pawns/WhiteRook.svg":
-              pieceChar = "R";
-              break;
-            case "pawns/BlackKnight.svg":
-              pieceChar = "n";
-              break;
-            case "pawns/WhiteKnight.svg":
-              pieceChar = "N";
-              break;
-            case "pawns/BlackBishop.svg":
-              pieceChar = "b";
-              break;
-            case "pawns/WhiteBishop.svg":
-              pieceChar = "B";
-              break;
-            case "pawns/BlackQueen.svg":
-              pieceChar = "q";
-              break;
-            case "pawns/WhiteQueen.svg":
-              pieceChar = "Q";
-              break;
-            case "pawns/BlackKing.svg":
-              pieceChar = "k";
-              break;
-            case "pawns/WhiteKing.svg":
-              pieceChar = "K";
-              break;
-            default:
-              console.error("Unknown piece image:", piece.image);
-          }
+        let emptyCount = 0;
+        for (let file = 0; file < 8; file++) {
+            const piece = pieces.find((p) => p.x === file && p.y === rank);
+            if (piece) {
+                let pieceChar = "";
+                switch (piece.image) {
+                    case "pawns/BlackPawn.svg":
+                        pieceChar = "p";
+                        break;
+                    case "pawns/WhitePawn.svg":
+                        pieceChar = "P";
+                        break;
+                    case "pawns/BlackRook.svg":
+                        pieceChar = "r";
+                        break;
+                    case "pawns/WhiteRook.svg":
+                        pieceChar = "R";
+                        break;
+                    case "pawns/BlackKnight.svg":
+                        pieceChar = "n";
+                        break;
+                    case "pawns/WhiteKnight.svg":
+                        pieceChar = "N";
+                        break;
+                    case "pawns/BlackBishop.svg":
+                        pieceChar = "b";
+                        break;
+                    case "pawns/WhiteBishop.svg":
+                        pieceChar = "B";
+                        break;
+                    case "pawns/BlackQueen.svg":
+                        pieceChar = "q";
+                        break;
+                    case "pawns/WhiteQueen.svg":
+                        pieceChar = "Q";
+                        break;
+                    case "pawns/BlackKing.svg":
+                        pieceChar = "k";
+                        break;
+                    case "pawns/WhiteKing.svg":
+                        pieceChar = "K";
+                        break;
+                    default:
+                        console.error("Unknown piece image:", piece.image);
+                }
 
-          if (emptyCount > 0) {
-            fen += emptyCount;
-            emptyCount = 0;
-          }
-          fen += pieceChar;
-        } else {
-          emptyCount++;
+                if (emptyCount > 0) {
+                    fen += emptyCount;
+                    emptyCount = 0;
+                }
+                fen += pieceChar;
+            } else {
+                emptyCount++;
+            }
         }
-      }
-      if (emptyCount > 0) {
-        fen += emptyCount;
-      }
-      if (rank > 0) fen += "/";
+        if (emptyCount > 0) {
+            fen += emptyCount;
+        }
+        if (rank > 0) fen += "/";
     }
     return fen + " w KQkq - 0 1";
-  }
+}
+
+useEffect(() => {
+    console.log(generateFEN(pieces));
+}, [pieces]);
 
   return (
     <div
