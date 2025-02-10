@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const WebSocket = require('ws');
 
 const wss = new WebSocket.Server({ port: 8080 });
@@ -6,26 +5,21 @@ const wss = new WebSocket.Server({ port: 8080 });
 let rooms = {};
 
 wss.on('connection', (ws) => {
-  console.log('New client connected');
+  ws.isAlive = true;
 
   ws.on('message', (message) => {
-    console.log('Received message:', message);
     const data = JSON.parse(message);
     switch (data.type) {
       case 'CREATE_ROOM':
         const roomId = Math.random().toString(36).substring(2, 7);
-        rooms[roomId] = [ws];
+        rooms[roomId] = [{ ws, username: data.username }];
         ws.send(JSON.stringify({ type: 'ROOM_CREATED', roomId }));
         break;
       case 'JOIN_ROOM':
         if (rooms[data.roomId]) {
-          rooms[data.roomId].push(ws);
+          rooms[data.roomId].push({ ws, username: data.username });
           ws.send(JSON.stringify({ type: 'JOINED_ROOM', roomId: data.roomId }));
-          rooms[data.roomId].forEach(client => {
-            if (client !== ws) {
-              client.send(JSON.stringify({ type: 'USER_JOINED', roomId: data.roomId }));
-            }
-          });
+          broadcastUserList(data.roomId);
         } else {
           ws.send(JSON.stringify({ type: 'ERROR', message: 'Room not found' }));
         }
@@ -33,18 +27,17 @@ wss.on('connection', (ws) => {
       case 'SEND_MESSAGE':
         if (rooms[data.roomId]) {
           rooms[data.roomId].forEach(client => {
-            if (client !== ws) {
-              client.send(JSON.stringify({ type: 'MESSAGE', message: data.message }));
-            }
+            client.ws.send(JSON.stringify({ type: 'MESSAGE', message: data.message, sender: data.sender }));
           });
         }
         break;
       case 'LEAVE_ROOM':
         if (rooms[data.roomId]) {
-          rooms[data.roomId] = rooms[data.roomId].filter(client => client !== ws);
+          rooms[data.roomId] = rooms[data.roomId].filter(client => client.ws !== ws);
           rooms[data.roomId].forEach(client => {
-            client.send(JSON.stringify({ type: 'USER_LEFT', roomId: data.roomId }));
+            client.ws.send(JSON.stringify({ type: 'USER_LEFT', roomId: data.roomId }));
           });
+          broadcastUserList(data.roomId);
         }
         break;
     }
@@ -52,12 +45,21 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     for (const roomId in rooms) {
-      rooms[roomId] = rooms[roomId].filter(client => client !== ws);
+      rooms[roomId] = rooms[roomId].filter(client => client.ws !== ws);
       if (rooms[roomId].length === 0) {
         delete rooms[roomId];
+      } else {
+        broadcastUserList(roomId);
       }
     }
   });
 });
+
+function broadcastUserList(roomId) {
+  const userList = rooms[roomId].map(client => client.username);
+  rooms[roomId].forEach(client => {
+    client.ws.send(JSON.stringify({ type: 'USER_LIST', usernames: userList }));
+  });
+}
 
 console.log('WebSocket server is running on ws://localhost:8080');

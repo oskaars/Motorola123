@@ -1,6 +1,7 @@
 class WebSocketClient {
   private socket: WebSocket;
   private roomId: string | null = null;
+  private eventHandlers: { [key: string]: Function[] } = {};
 
   constructor() {
     this.socket = new WebSocket('ws://localhost:8080');
@@ -19,42 +20,35 @@ class WebSocketClient {
   private onMessage(event: MessageEvent) {
     const data = JSON.parse(event.data);
     console.log('Received message from server:', data);
-    switch (data.type) {
-      case 'ROOM_CREATED':
-        this.roomId = data.roomId;
-        console.log(`Room created with ID: ${this.roomId}`);
-        break;
-      case 'JOINED_ROOM':
-        this.roomId = data.roomId;
-        console.log(`Joined room with ID: ${this.roomId}`);
-        break;
-      case 'MESSAGE':
-        console.log(`Message received: ${data.message}`);
-        break;
-      case 'USER_JOINED':
-        console.log(`User joined room: ${data.roomId}`);
-        break;
-      case 'USER_LEFT':
-        console.log(`User left room: ${data.roomId}`);
-        break;
-      case 'ERROR':
-        console.error(`Error: ${data.message}`);
-        break;
+    if (this.eventHandlers[data.type]) {
+      this.eventHandlers[data.type].forEach(handler => handler(data));
     }
   }
 
-  createRoom() {
-    this.socket.send(JSON.stringify({ type: 'CREATE_ROOM' }));
-  }
-
-  joinRoom(roomId: string) {
-    this.socket.send(JSON.stringify({ type: 'JOIN_ROOM', roomId }));
-  }
-
-  sendMessage(message: string) {
-    if (this.roomId) {
-      this.socket.send(JSON.stringify({ type: 'SEND_MESSAGE', roomId: this.roomId, message }));
+  addEventListener(event: string, handler: Function) {
+    if (!this.eventHandlers[event]) {
+      this.eventHandlers[event] = [];
     }
+    this.eventHandlers[event].push(handler);
+  }
+
+  removeEventListener(event: string, handler: Function) {
+    if (this.eventHandlers[event]) {
+      this.eventHandlers[event] = this.eventHandlers[event].filter(h => h !== handler);
+    }
+  }
+
+  createRoom(username: string) {
+    this.socket.send(JSON.stringify({ type: 'CREATE_ROOM', username }));
+  }
+
+  joinRoom(roomId: string, username: string) {
+    this.roomId = roomId;
+    this.socket.send(JSON.stringify({ type: 'JOIN_ROOM', roomId, username }));
+  }
+
+  sendMessage(roomId: string, message: string, sender: string) {
+    this.socket.send(JSON.stringify({ type: 'SEND_MESSAGE', roomId, message, sender }));
   }
 
   leaveRoom() {
