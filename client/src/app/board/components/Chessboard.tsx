@@ -7,32 +7,15 @@ import Referee from "../referee/referee";
 const verticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
 const horizontalAxis = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
-export interface Piece {
-    image: string;
-    x: number;
-    y: number;
-    type: PieceType;
-    team: TeamType;
-}
+export interface Piece {image: string; x: number; y: number; type: PieceType; team: TeamType;}
 
-export enum PieceType {
-    PAWN,
-    ROOK,
-    KNIGHT,
-    BISHOP,
-    QUEEN,
-    KING
-}
+export enum PieceType {PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING}
 
-export enum TeamType {
-    OUR,
-    OPPONENTS
-}
+export enum TeamType {OUR, OPPONENTS}
 
-export interface Position {
-    x: number;
-    y: number;  
-}
+export interface Position {x: number; y: number;}
+
+export interface CastlingRights {whiteKingSide: boolean; whiteQueenSide: boolean; blackKingSide: boolean; blackQueenSide: boolean;}
 
 const startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -110,6 +93,8 @@ export default function Chessboard() {
     const [gridX, setGridX] = useState(0);
     const [gridY, setGridY] = useState(0);
     const [enPassantTarget, setEnPassantTarget] = useState<Position | null>(null);
+    const [isInCheck, setIsInCheck] = useState<TeamType | null>(null);
+    const [isCheckmate, setIsCheckmate] = useState<TeamType | null>(null);
     const chessboardRef = useRef<HTMLDivElement>(null);
     const referee = new Referee();
 
@@ -176,16 +161,7 @@ export default function Chessboard() {
             const attackedPiece = pieces.find(piece => piece.x === x && piece.y === y);
     
             if(currentPiece){
-                const validMove = referee.isValidMove(
-                    gridX, 
-                    gridY, 
-                    x, 
-                    y, 
-                    currentPiece.type, 
-                    currentPiece.team, 
-                    pieces,
-                    enPassantTarget
-                );
+                const validMove = referee.isValidMove(gridX, gridY, x, y, currentPiece.type, currentPiece.team, pieces, enPassantTarget);
             
                 if(validMove){
                     const updatedPieces = pieces.map(piece => {
@@ -206,7 +182,7 @@ export default function Chessboard() {
                         if(piece.x === x && piece.y === y) {
                             return null;
                         }
-                        
+
                         return piece;
                     }).filter((piece): piece is Piece => piece !== null);
 
@@ -215,6 +191,19 @@ export default function Chessboard() {
                         setEnPassantTarget({ x, y: enPassantY });
                     } else {
                         setEnPassantTarget(null);
+                    }
+                    if (referee.isKingInCheck(TeamType.OUR, updatedPieces)) {
+                        setIsInCheck(TeamType.OUR);
+                        if (referee.isCheckmate(TeamType.OUR, updatedPieces)) {
+                            setIsCheckmate(TeamType.OUR);
+                        }
+                    } else if (referee.isKingInCheck(TeamType.OPPONENTS, updatedPieces)) {
+                        setIsInCheck(TeamType.OPPONENTS);
+                        if (referee.isCheckmate(TeamType.OPPONENTS, updatedPieces)) {
+                            setIsCheckmate(TeamType.OPPONENTS);
+                        }
+                    } else {
+                        setIsInCheck(null);
                     }
     
                     setPieces(updatedPieces);
@@ -227,6 +216,13 @@ export default function Chessboard() {
             setActivePiece(null);
         }
     }
+
+    const [castlingRights, setCastlingRigthts] = useState<CastlingRights>({
+        whiteKingSide: true,
+        whiteQueenSide: true,
+        blackKingSide: true,
+        blackQueenSide: true
+    });
     
 
     function generateFEN(pieces: Piece[]): string {
@@ -303,8 +299,7 @@ export default function Chessboard() {
             onMouseDown={(e: React.MouseEvent) => grabPiece(e)}
             onMouseUp={(e: React.MouseEvent) => droppedPiece(e)}
             className="bg-[#ff0000] w-[800px] h-[800px] grid grid-cols-8 text-black"
-            ref={chessboardRef}
-        >
+            ref={chessboardRef}>
             {generateBoard()}
         </div>
     );

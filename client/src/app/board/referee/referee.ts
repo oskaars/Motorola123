@@ -12,10 +12,113 @@ export default class Referee {
         return piece ? piece.team !== team : false;
     }
 
-    isValidMove(px: number, py: number, x: number, y: number, type: PieceType, team: TeamType, boardState: Piece[], enPassantTarget: Position | null): boolean {
-        const targetPiece = boardState.find(piece => piece.x === x && piece.y === y);
-        if(targetPiece && targetPiece.team === team){
+    isKingInCheck(team: TeamType, boardState: Piece[]): boolean {
+        // Find the king
+        const king = boardState.find(p => p.type === PieceType.KING && p.team === team);
+        if (!king) return false;
+
+        // Check if any opponent piece can attack the king
+        return boardState.some(piece => 
+            piece.team !== team && 
+            this.isValidMove(piece.x, piece.y, king.x, king.y, piece.type, piece.team, boardState, null)
+        );
+    }
+
+    isCheckmate(team: TeamType, boardState: Piece[]): boolean {
+        // If king is not in check, it's not checkmate
+        if (!this.isKingInCheck(team, boardState)) return false;
+
+        // Try all possible moves for all pieces
+        return !boardState
+            .filter(piece => piece.team === team)
+            .some(piece => {
+                // Try every square on the board
+                for (let x = 0; x < 8; x++) {
+                    for (let y = 0; y < 8; y++) {
+                        // If we can make a valid move that gets us out of check
+                        if (this.canMoveToSquare(piece, x, y, boardState)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            });
+    }
+
+    private canMoveToSquare(piece: Piece, x: number, y: number, boardState: Piece[]): boolean {
+        // Check if the move is valid
+        if (!this.isValidMove(piece.x, piece.y, x, y, piece.type, piece.team, boardState, null)) {
             return false;
+        }
+
+        // Simulate the move and check if it gets us out of check
+        const simulatedBoard = [...boardState];
+        const simulatedPiece = simulatedBoard.find(p => p.x === piece.x && p.y === piece.y);
+        const capturedPiece = simulatedBoard.find(p => p.x === x && p.y === y);
+
+        if (simulatedPiece) {
+            const originalX = simulatedPiece.x;
+            const originalY = simulatedPiece.y;
+
+            // Make the move
+            simulatedPiece.x = x;
+            simulatedPiece.y = y;
+            if (capturedPiece) {
+                simulatedBoard.splice(simulatedBoard.indexOf(capturedPiece), 1);
+            }
+
+            // Check if we're still in check
+            const stillInCheck = this.isKingInCheck(piece.team, simulatedBoard);
+
+            // Restore the board state
+            simulatedPiece.x = originalX;
+            simulatedPiece.y = originalY;
+            if (capturedPiece) {
+                simulatedBoard.push(capturedPiece);
+            }
+
+            return !stillInCheck;
+        }
+
+        return false;
+    }
+
+    isValidMove(px: number, py: number, x: number, y: number, type: PieceType, team: TeamType, boardState: Piece[], enPassantTarget: Position | null): boolean {
+        // First check if the move is valid according to piece rules
+        const targetPiece = boardState.find(piece => piece.x === x && piece.y === y);
+        if (targetPiece && targetPiece.team === team) {
+            return false;
+        }
+
+        // Simulate the move to check if it would put/leave our king in check
+        const simulatedBoard = [...boardState];
+        const movingPiece = simulatedBoard.find(p => p.x === px && p.y === py);
+        const capturedPiece = simulatedBoard.find(p => p.x === x && p.y === y);
+
+        if (movingPiece) {
+            const originalX = movingPiece.x;
+            const originalY = movingPiece.y;
+
+            // Make the move
+            movingPiece.x = x;
+            movingPiece.y = y;
+            if (capturedPiece) {
+                simulatedBoard.splice(simulatedBoard.indexOf(capturedPiece), 1);
+            }
+
+            // Check if the move would put/leave us in check
+            const wouldBeInCheck = this.isKingInCheck(team, simulatedBoard);
+
+            // Restore the board state
+            movingPiece.x = originalX;
+            movingPiece.y = originalY;
+            if (capturedPiece) {
+                simulatedBoard.push(capturedPiece);
+            }
+
+            if (wouldBeInCheck) {
+                return false;
+            }
         }
         
         if (type === PieceType.PAWN) {
