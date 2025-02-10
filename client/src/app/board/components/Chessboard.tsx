@@ -29,6 +29,11 @@ export enum TeamType {
     OPPONENTS
 }
 
+export interface Position {
+    x: number;
+    y: number;  
+}
+
 const startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 const pieceImages = {
@@ -95,13 +100,37 @@ function getPieceType(symbol: string): PieceType {
     }
 }
 
+function isInsideBoard(x: number, y: number): boolean {
+    return x >= 0 && x < 8 && y >= 0 && y < 8;
+}
+
 export default function Chessboard() {
     const [pieces, setPieces] = useState<Piece[]>(loadPositionFromFEN(startFEN));
     const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
     const [gridX, setGridX] = useState(0);
     const [gridY, setGridY] = useState(0);
+    const [enPassantTarget, setEnPassantTarget] = useState<Position | null>(null);
     const chessboardRef = useRef<HTMLDivElement>(null);
     const referee = new Referee();
+
+    const generateBoard = () => {
+        const boardSquares: JSX.Element[] = [];
+        for (let j = verticalAxis.length - 1; j >= 0; j--) {
+            for (let i = 0; i < horizontalAxis.length; i++) {
+                const number = j + i + 2;
+                let image: string | undefined;
+
+                pieces.forEach(p => {
+                    if (p.x === i && p.y === j) {
+                        image = p.image;
+                    }
+                });
+
+                boardSquares.push(<Tile key={`${i},${j}`} image={image} number={number} />);
+            }
+        }
+        return boardSquares;
+    };
 
     function grabPiece(e: React.MouseEvent) {
         const element = e.target as HTMLElement;
@@ -135,22 +164,58 @@ export default function Chessboard() {
             const x = Math.floor((e.clientX - chessboard.offsetLeft) / 100);
             const y = Math.abs(Math.ceil((e.clientY - chessboard.offsetTop - 800) / 100));
     
+            if (!isInsideBoard(x, y)) {
+                activePiece.style.position = 'relative';
+                activePiece.style.removeProperty('top');
+                activePiece.style.removeProperty('left');
+                setActivePiece(null);
+                return;
+            }
+
             const currentPiece = pieces.find(piece => piece.x === gridX && piece.y === gridY);
             const attackedPiece = pieces.find(piece => piece.x === x && piece.y === y);
     
             if(currentPiece){
-                const validMove = referee.isValidMove(gridX, gridY, x, y, currentPiece.type, currentPiece.team, pieces);
+                const validMove = referee.isValidMove(
+                    gridX, 
+                    gridY, 
+                    x, 
+                    y, 
+                    currentPiece.type, 
+                    currentPiece.team, 
+                    pieces,
+                    enPassantTarget
+                );
             
                 if(validMove){
                     const updatedPieces = pieces.map(piece => {
+
                         if(piece.x === currentPiece.x && piece.y === currentPiece.y) {
                             return { ...piece, x, y };
                         }
-                        if(!(piece.x === x && piece.y === y)) {
-                            return piece;
+                        
+                        if(currentPiece.type === PieceType.PAWN && 
+                           enPassantTarget && 
+                           x === enPassantTarget.x && 
+                           y === enPassantTarget.y) {
+                            if(piece.x === x && piece.y === (currentPiece.team === TeamType.OUR ? y + 1 : y - 1)) {
+                                return null;
+                            }
                         }
-                        return null;
+
+                        if(piece.x === x && piece.y === y) {
+                            return null;
+                        }
+                        
+                        return piece;
                     }).filter((piece): piece is Piece => piece !== null);
+
+                    if (currentPiece.type === PieceType.PAWN && Math.abs(gridY - y) === 2) {
+                        const enPassantY = (gridY + y) / 2;
+                        setEnPassantTarget({ x, y: enPassantY });
+                    } else {
+                        setEnPassantTarget(null);
+                    }
     
                     setPieces(updatedPieces);
                 } else {
@@ -232,32 +297,15 @@ export default function Chessboard() {
 
     // console.log(generateFEN(pieces));
 
-    let board: JSX.Element[] = [];
-
-    for (let j = verticalAxis.length - 1; j >= 0; j--) {
-        for (let i = 0; i < horizontalAxis.length; i++) {
-            const number = j + i + 2;
-            let image: string | undefined;
-
-            pieces.forEach(p => {
-                if (p.x === i && p.y === j) {
-                    image = p.image;
-                }
-            });
-
-            board.push(<Tile key={`${i},${j}`} image={image} number={number} />);
-        }
-    }
-
     return (
         <div
-            onMouseMove={(e: any) => movePiece(e)}
-            onMouseDown={(e: any) => grabPiece(e)}
-            onMouseUp={(e: any ) => droppedPiece(e)}
+            onMouseMove={(e: React.MouseEvent) => movePiece(e)}
+            onMouseDown={(e: React.MouseEvent) => grabPiece(e)}
+            onMouseUp={(e: React.MouseEvent) => droppedPiece(e)}
             className="bg-[#ff0000] w-[800px] h-[800px] grid grid-cols-8 text-black"
             ref={chessboardRef}
         >
-            {board}
+            {generateBoard()}
         </div>
     );
 }
