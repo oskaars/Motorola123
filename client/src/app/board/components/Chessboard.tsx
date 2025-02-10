@@ -1,5 +1,6 @@
 "use client";
-import React, { JSX, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
+import { JSX } from "react/jsx-runtime";
 import Tile from "./Tile";
 import Referee from "../referee/referee";
 
@@ -250,9 +251,9 @@ export default function Chessboard() {
 
     return (
         <div
-            onMouseMove={(e) => movePiece(e)}
-            onMouseDown={(e) => grabPiece(e)}
-            onMouseUp={(e) => droppedPiece(e)}
+            onMouseMove={(e: any) => movePiece(e)}
+            onMouseDown={(e: any) => grabPiece(e)}
+            onMouseUp={(e: any ) => droppedPiece(e)}
             className="bg-[#ff0000] w-[800px] h-[800px] grid grid-cols-8 text-black"
             ref={chessboardRef}
         >
