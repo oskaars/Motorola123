@@ -226,20 +226,16 @@ export default class Referee {
         const xDistance = Math.abs(x - px);
         const yDistance = Math.abs(y - py);
     
-        // Normal king move
         if (xDistance <= 1 && yDistance <= 1) {
             return true;
         }
     
-        // Castling
         if (castlingRights && xDistance === 2 && yDistance === 0) {
-            // Check if king is in starting position
             if ((team === TeamType.OUR && py !== 0) || (team === TeamType.OPPONENTS && py !== 7)) {
                 return false;
             }
             if (px !== 4) return false;
     
-            // Check if king is in check
             if (this.isKingInCheck(team, boardState)) return false;
     
             const isKingSide = x > px;
@@ -248,7 +244,6 @@ export default class Referee {
             const finalKingX = isKingSide ? 6 : 2;
             const finalRookX = isKingSide ? 5 : 3;
     
-            // Check castling rights
             if (team === TeamType.OUR) {
                 if (isKingSide && !castlingRights.whiteKingSide) return false;
                 if (!isKingSide && !castlingRights.whiteQueenSide) return false;
@@ -256,8 +251,7 @@ export default class Referee {
                 if (isKingSide && !castlingRights.blackKingSide) return false;
                 if (!isKingSide && !castlingRights.blackQueenSide) return false;
             }
-    
-            // Check if rook is present
+
             const rook = boardState.find(p => 
                 p.x === rookX && 
                 p.y === py && 
@@ -265,15 +259,13 @@ export default class Referee {
                 p.team === team
             );
             if (!rook) return false;
-    
-            // Check if path is clear
+
             for (const pathX of castlingPath) {
                 if (this.tileIsOccupied(pathX, py, boardState)) {
                     return false;
                 }
             }
     
-            // Check if king passes through check
             for (const pathX of [px, ...castlingPath]) {
                 const simulatedBoard = boardState.map(p => ({ ...p }));
                 const kingPiece = simulatedBoard.find(p => p.type === PieceType.KING && p.team === team);
@@ -285,7 +277,6 @@ export default class Referee {
                 }
             }
     
-            // Check final position
             const finalBoard = boardState.map(p => ({ ...p }));
             const kingPiece = finalBoard.find(p => p.type === PieceType.KING && p.team === team);
             const rookPiece = finalBoard.find(p => p.x === rookX && p.y === py);

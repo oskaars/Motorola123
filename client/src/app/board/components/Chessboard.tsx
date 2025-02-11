@@ -7,17 +7,46 @@ import Referee from "../referee/referee";
 const verticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
 const horizontalAxis = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
-export interface Piece {image: string; x: number; y: number; type: PieceType; team: TeamType;}
+export interface Piece {
+  image: string;
+  x: number;
+  y: number;
+  type: PieceType;
+  team: TeamType;
+}
 
-export enum PieceType {PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING,}
+export enum PieceType {
+  PAWN,
+  ROOK,
+  KNIGHT,
+  BISHOP,
+  QUEEN,
+  KING,
+}
 
-export enum TeamType {OUR, OPPONENTS,}
+export enum TeamType {
+  OUR,
+  OPPONENTS,
+}
 
-export enum GameState {ACTIVE, CHECK, CHECKMATE, STALEMATE,}
+export enum GameState {
+  ACTIVE,
+  CHECK,
+  CHECKMATE,
+  STALEMATE,
+}
 
-export interface Position {x: number; y: number;}
+export interface Position {
+  x: number;
+  y: number;
+}
 
-export interface CastlingRights {whiteKingSide: boolean; whiteQueenSide: boolean; blackKingSide: boolean; blackQueenSide: boolean;}
+export interface CastlingRights {
+  whiteKingSide: boolean;
+  whiteQueenSide: boolean;
+  blackKingSide: boolean;
+  blackQueenSide: boolean;
+}
 
 const startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -52,7 +81,13 @@ function loadPositionFromFEN(fen: string): Piece[] {
       const image = pieceImages[symbol as keyof typeof pieceImages];
       if (image) {
         const team = rank < 2 ? TeamType.OUR : TeamType.OPPONENTS;
-        pieces.push({ image, x: file, y: rank, type: getPieceType(symbol), team });
+        pieces.push({
+          image,
+          x: file,
+          y: rank,
+          type: getPieceType(symbol),
+          team,
+        });
       }
       file++;
     }
@@ -94,7 +129,9 @@ export default function Chessboard() {
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
   const [gridX, setGridX] = useState(0);
   const [gridY, setGridY] = useState(0);
-  const [enPassantTarget, setEnPassantTarget] = useState<Position | null>(null);
+  const [enPassantTarget, setEnPassantTarget] = useState<Position | null>(
+    null
+  );
   const [isInCheck, setIsInCheck] = useState<TeamType | null>(null);
   const [isCheckmate, setIsCheckmate] = useState<TeamType | null>(null);
   const [gameState, setGameState] = useState<GameState>(GameState.ACTIVE);
@@ -118,7 +155,9 @@ export default function Chessboard() {
         setIsCheckmate(isInCheck);
         setGameState(GameState.CHECKMATE);
         console.log(
-          `Szach Mat! Wygrał: ${isCheckmate === TeamType.OUR ? "Przeciwnik" : "Ty"}!`
+          `Szach Mat! Wygrał: ${
+            isCheckmate === TeamType.OUR ? "Przeciwnik" : "Ty"
+          }!`
         );
       }
     } else {
@@ -141,7 +180,9 @@ export default function Chessboard() {
           }
         });
 
-        boardSquares.push(<Tile key={`${i},${j}`} image={image} number={number} />);
+        boardSquares.push(
+          <Tile key={`${i},${j}`} image={image} number={number} />
+        );
       }
     }
     return boardSquares;
@@ -156,7 +197,9 @@ export default function Chessboard() {
     const chessboard = chessboardRef.current;
     if (element.classList.contains("chess-piece") && chessboard) {
       setGridX(Math.floor((e.clientX - chessboard.offsetLeft) / 100));
-      setGridY(Math.abs(Math.ceil((e.clientY - chessboard.offsetTop - 800) / 100)));
+      setGridY(
+        Math.abs(Math.ceil((e.clientY - chessboard.offsetTop - 800) / 100))
+      );
       const x = e.clientX - 50;
       const y = e.clientY - 50;
       element.style.position = "absolute";
@@ -187,7 +230,9 @@ export default function Chessboard() {
     const chessboard = chessboardRef.current;
     if (activePiece && chessboard) {
       const x = Math.floor((e.clientX - chessboard.offsetLeft) / 100);
-      const y = Math.abs(Math.ceil((e.clientY - chessboard.offsetTop - 800) / 100));
+      const y = Math.abs(
+        Math.ceil((e.clientY - chessboard.offsetTop - 800) / 100)
+      );
 
       if (!isInsideBoard(x, y)) {
         activePiece.style.position = "relative";
@@ -197,13 +242,21 @@ export default function Chessboard() {
         return;
       }
 
-      const currentPiece = pieces.find((piece) => piece.x === gridX && piece.y === gridY);
+      const currentPiece = pieces.find(
+        (piece) => piece.x === gridX && piece.y === gridY
+      );
 
       if (currentPiece) {
         if (currentPiece.type === PieceType.KING && Math.abs(x - gridX) === 2) {
           const isKingSide = x > gridX;
           const rookX = isKingSide ? 7 : 0;
-          const rook = pieces.find((p) => p.x === rookX && p.y === y && p.type === PieceType.ROOK && p.team === currentPiece.team);
+          const rook = pieces.find(
+            (p) =>
+              p.x === rookX &&
+              p.y === y &&
+              p.type === PieceType.ROOK &&
+              p.team === currentPiece.team
+          );
 
           if (rook) {
             const newKingX = isKingSide ? 6 : 2;
@@ -211,21 +264,31 @@ export default function Chessboard() {
 
             const castlingPath = isKingSide ? [5, 6] : [1, 2, 3];
 
-            const simulatedBoard = [...pieces];
-            const movingKing = simulatedBoard.find(p => p.x === gridX && p.y === gridY);
-            if (movingKing) {
-              movingKing.x = newKingX;
-
-              const wouldBeInCheck = referee.isKingInCheck(currentPiece.team, simulatedBoard);
-              if (wouldBeInCheck) {
-                activePiece.style.position = "relative";
-                activePiece.style.removeProperty("top");
-                activePiece.style.removeProperty("left");
-                setActivePiece(null);
-                return;
+            const simulatedBoard = pieces.map((p) => {
+              if (p === currentPiece) {
+                return { ...p, x: newKingX, y: y };
+              } else if (p === rook) {
+                return { ...p, x: newRookX, y: y };
+              } else {
+                return { ...p };
               }
+            });
+
+            const wouldBeInCheck = referee.isKingInCheck(
+              currentPiece.team,
+              simulatedBoard
+            );
+            if (wouldBeInCheck) {
+              activePiece.style.position = "relative";
+              activePiece.style.removeProperty("top");
+              activePiece.style.removeProperty("left");
+              setActivePiece(null);
+              return;
             }
-            const isPathClear = castlingPath.every((pathX) => !pieces.find((p) => p.x === pathX && p.y === y));
+
+            const isPathClear = castlingPath.every(
+              (pathX) => !pieces.find((p) => p.x === pathX && p.y === y)
+            );
 
             if (isPathClear) {
               const updatedPieces = pieces.map((p) => {
@@ -241,11 +304,21 @@ export default function Chessboard() {
               setPieces(updatedPieces);
 
               if (currentPiece.team === TeamType.OUR) {
-                setCastlingRights({ ...castlingRights, whiteKingSide: false, whiteQueenSide: false });
+                setCastlingRights({
+                  ...castlingRights,
+                  whiteKingSide: false,
+                  whiteQueenSide: false,
+                });
               } else {
-                setCastlingRights({ ...castlingRights, blackKingSide: false, blackQueenSide: false });
+                setCastlingRights({
+                  ...castlingRights,
+                  blackKingSide: false,
+                  blackQueenSide: false,
+                });
               }
-              setCurrentTurn(currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR);
+              setCurrentTurn(
+                currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR
+              );
               return;
             }
           }
@@ -264,8 +337,7 @@ export default function Chessboard() {
           currentPiece.type,
           currentPiece.team,
           pieces,
-          enPassantTarget,
-          castlingRights
+          enPassantTarget
         );
 
         if (validMove) {
@@ -297,15 +369,22 @@ export default function Chessboard() {
             })
             .filter((piece): piece is Piece => piece !== null);
 
-          if (currentPiece.type === PieceType.PAWN && Math.abs(gridY - y) === 2) {
+          if (
+            currentPiece.type === PieceType.PAWN &&
+            Math.abs(gridY - y) === 2
+          ) {
             const enPassantY = (gridY + y) / 2;
             setEnPassantTarget({ x, y: enPassantY });
           } else {
             setEnPassantTarget(null);
           }
 
-          const nextTurn = currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR;
-          const ourKingInCheck = referee.isKingInCheck(currentTurn, updatedPieces);
+          const nextTurn =
+            currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR;
+          const ourKingInCheck = referee.isKingInCheck(
+            currentTurn,
+            updatedPieces
+          );
           const opponentKingInCheck = referee.isKingInCheck(
             nextTurn,
             updatedPieces
@@ -318,7 +397,9 @@ export default function Chessboard() {
               setIsCheckmate(currentTurn);
               setGameState(GameState.CHECKMATE);
               console.log(
-                `Szach Mat! Wygrał: ${currentTurn === TeamType.OUR ? "Przeciwnik" : "Ty"}!`
+                `Szach Mat! Wygrał: ${
+                  currentTurn === TeamType.OUR ? "Przeciwnik" : "Ty"
+                }!`
               );
             }
           } else if (opponentKingInCheck) {
@@ -328,7 +409,9 @@ export default function Chessboard() {
               setIsCheckmate(nextTurn);
               setGameState(GameState.CHECKMATE);
               console.log(
-                `Szach Mat! Wygrał: ${nextTurn === TeamType.OUR ? "Przeciwnik" : "Ty"}!`
+                `Szach Mat! Wygrał: ${
+                  nextTurn === TeamType.OUR ? "Przeciwnik" : "Ty"
+                }!`
               );
             }
           } else {
@@ -337,29 +420,6 @@ export default function Chessboard() {
             if (referee.isStalemate(nextTurn, updatedPieces)) {
               setGameState(GameState.STALEMATE);
               console.log("Pat! Remis.");
-            }
-          }
-
-          if (currentPiece.type === PieceType.KING) {
-            if (currentPiece.team === TeamType.OUR) {
-              setCastlingRights({ ...castlingRights, whiteKingSide: false, whiteQueenSide: false });
-            } else {
-              setCastlingRights({ ...castlingRights, blackKingSide: false, blackQueenSide: false });
-            }
-          }
-          if (currentPiece.type === PieceType.ROOK) {
-            if (currentPiece.team === TeamType.OUR) {
-              if (gridX === 0) {
-                setCastlingRights({ ...castlingRights, whiteQueenSide: false });
-              } else if (gridX === 7) {
-                setCastlingRights({ ...castlingRights, whiteKingSide: false });
-              }
-            } else {
-              if (gridX === 0) {
-                setCastlingRights({ ...castlingRights, blackQueenSide: false });
-              } else if (gridX === 7) {
-                setCastlingRights({ ...castlingRights, blackKingSide: false });
-              }
             }
           }
 
@@ -375,75 +435,75 @@ export default function Chessboard() {
     }
   }
 
-function generateFEN(pieces: Piece[]): string {
+  function generateFEN(pieces: Piece[]): string {
     let fen = "";
     for (let rank = 7; rank >= 0; rank--) {
-        let emptyCount = 0;
-        for (let file = 0; file < 8; file++) {
-            const piece = pieces.find((p) => p.x === file && p.y === rank);
-            if (piece) {
-                let pieceChar = "";
-                switch (piece.image) {
-                    case "pawns/BlackPawn.svg":
-                        pieceChar = "p";
-                        break;
-                    case "pawns/WhitePawn.svg":
-                        pieceChar = "P";
-                        break;
-                    case "pawns/BlackRook.svg":
-                        pieceChar = "r";
-                        break;
-                    case "pawns/WhiteRook.svg":
-                        pieceChar = "R";
-                        break;
-                    case "pawns/BlackKnight.svg":
-                        pieceChar = "n";
-                        break;
-                    case "pawns/WhiteKnight.svg":
-                        pieceChar = "N";
-                        break;
-                    case "pawns/BlackBishop.svg":
-                        pieceChar = "b";
-                        break;
-                    case "pawns/WhiteBishop.svg":
-                        pieceChar = "B";
-                        break;
-                    case "pawns/BlackQueen.svg":
-                        pieceChar = "q";
-                        break;
-                    case "pawns/WhiteQueen.svg":
-                        pieceChar = "Q";
-                        break;
-                    case "pawns/BlackKing.svg":
-                        pieceChar = "k";
-                        break;
-                    case "pawns/WhiteKing.svg":
-                        pieceChar = "K";
-                        break;
-                    default:
-                        console.error("Unknown piece image:", piece.image);
-                }
+      let emptyCount = 0;
+      for (let file = 0; file < 8; file++) {
+        const piece = pieces.find((p) => p.x === file && p.y === rank);
+        if (piece) {
+          let pieceChar = "";
+          switch (piece.image) {
+            case "pawns/BlackPawn.svg":
+              pieceChar = "p";
+              break;
+            case "pawns/WhitePawn.svg":
+              pieceChar = "P";
+              break;
+            case "pawns/BlackRook.svg":
+              pieceChar = "r";
+              break;
+            case "pawns/WhiteRook.svg":
+              pieceChar = "R";
+              break;
+            case "pawns/BlackKnight.svg":
+              pieceChar = "n";
+              break;
+            case "pawns/WhiteKnight.svg":
+              pieceChar = "N";
+              break;
+            case "pawns/BlackBishop.svg":
+              pieceChar = "b";
+              break;
+            case "pawns/WhiteBishop.svg":
+              pieceChar = "B";
+              break;
+            case "pawns/BlackQueen.svg":
+              pieceChar = "q";
+              break;
+            case "pawns/WhiteQueen.svg":
+              pieceChar = "Q";
+              break;
+            case "pawns/BlackKing.svg":
+              pieceChar = "k";
+              break;
+            case "pawns/WhiteKing.svg":
+              pieceChar = "K";
+              break;
+            default:
+              console.error("Unknown piece image:", piece.image);
+          }
 
-                if (emptyCount > 0) {
-                    fen += emptyCount;
-                    emptyCount = 0;
-                }
-                fen += pieceChar;
-            } else {
-                emptyCount++;
-            }
-        }
-        if (emptyCount > 0) {
+          if (emptyCount > 0) {
             fen += emptyCount;
+            emptyCount = 0;
+          }
+          fen += pieceChar;
+        } else {
+          emptyCount++;
         }
-        if (rank > 0) fen += "/";
+      }
+      if (emptyCount > 0) {
+        fen += emptyCount;
+      }
+      if (rank > 0) fen += "/";
     }
     return fen + " w KQkq - 0 1";
-}
+  }
 
-useEffect(() => {
+  useEffect(() => {
     console.log(generateFEN(pieces));
-}, [pieces]);
+  }, [pieces]);
 
   return (
     <div
