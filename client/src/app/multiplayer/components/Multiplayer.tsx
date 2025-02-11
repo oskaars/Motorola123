@@ -57,7 +57,6 @@ const Multiplayer: React.FC = () => {
   const handleSendMessage = () => {
     if (roomId) {
       client.sendMessage(roomId, message, username);
-      setMessages(prevMessages => [...prevMessages, { sender: username, message }]);
       setMessage('');
     }
   };
