@@ -3,14 +3,14 @@ import { PieceType, TeamType, Piece, Position } from '../components/Chessboard';
 export default class Referee {
     getCastlingRookMove(kingFromX: number, kingToX: number, kingY: number): { fromX: number; toX: number } | null {
         if (Math.abs(kingToX - kingFromX) !== 2) return null;
-        
+
         const isKingSide = kingToX > kingFromX;
         return {
             fromX: isKingSide ? 7 : 0,
             toX: isKingSide ? 5 : 3
         };
     }
-    
+
     private canPieceAttackSquare(px: number, py: number, x: number, y: number, type: PieceType, team: TeamType, boardState: Piece[]): boolean {
         switch (type) {
             case PieceType.PAWN: {
@@ -96,8 +96,8 @@ export default class Referee {
         const king = boardState.find(p => p.type === PieceType.KING && p.team === team);
         if (!king) return false;
 
-        return boardState.some(piece => 
-            piece.team !== team && 
+        return boardState.some(piece =>
+            piece.team !== team &&
             this.canPieceAttackSquare(piece.x, piece.y, king.x, king.y, piece.type, piece.team, boardState)
         );
     }
@@ -119,9 +119,11 @@ export default class Referee {
             if (piece.team === team) {
                 for (let x = 0; x < 8; x++) {
                     for (let y = 0; y < 8; y++) {
-                        const simulatedBoard = this.simulateMove(piece.x, piece.y, x, y, boardState);
-                        if (simulatedBoard && !this.isKingInCheck(team, simulatedBoard)) {
-                            return true;
+                        if (this.isValidMove(piece.x, piece.y, x, y, piece.type, piece.team, boardState, null, undefined)) {
+                            const simulatedBoard = this.simulateMove(piece.x, piece.y, x, y, boardState);
+                            if (simulatedBoard && !this.isKingInCheck(team, simulatedBoard)) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -133,11 +135,6 @@ export default class Referee {
     private simulateMove(px: number, py: number, x: number, y: number, boardState: Piece[]): Piece[] | null {
         const piece = boardState.find(p => p.x === px && p.y === py);
         if (!piece) return null;
-
-        if (!this.isValidMove(px, py, x, y, piece.type, piece.team, boardState, null)) {
-            return null;
-        }
-
         const simulatedBoard = boardState.map(p => ({ ...p }));
         const movingPiece = simulatedBoard.find(p => p.x === px && p.y === py);
         const targetPiece = simulatedBoard.find(p => p.x === x && p.y === y);
@@ -156,13 +153,13 @@ export default class Referee {
 
     isValidMove(px: number, py: number, x: number, y: number, type: PieceType, team: TeamType, boardState: Piece[], enPassantTarget: Position | null, castlingRights?: { whiteKingSide: boolean; whiteQueenSide: boolean; blackKingSide: boolean; blackQueenSide: boolean; }): boolean {
         if (x < 0 || x > 7 || y < 0 || y > 7) return false;
-        
+
         const targetPiece = boardState.find(piece => piece.x === x && piece.y === y);
         if (targetPiece && targetPiece.team === team) return false;
 
         const simulatedBoard = boardState.map(p => ({ ...p }));
         const movingPiece = simulatedBoard.find(p => p.x === px && p.y === py);
-        
+
         if (movingPiece) {
             const originalX = movingPiece.x;
             const originalY = movingPiece.y;
@@ -201,11 +198,9 @@ export default class Referee {
 
         if (px === x && y - py === pawnDirection && !this.tileIsOccupied(x, y, boardState)) {
             return true;
-        }
-
-        if (px === x && py === startingRow && y - py === 2 * pawnDirection) {
-            return !this.tileIsOccupied(x, y, boardState) && 
-                   !this.tileIsOccupied(x, y - pawnDirection, boardState);
+        } else if (px === x && py === startingRow && y - py === 2 * pawnDirection) {
+            return !this.tileIsOccupied(x, y, boardState) &&
+                !this.tileIsOccupied(x, y - pawnDirection, boardState);
         }
 
         if (Math.abs(x - px) === 1 && y - py === pawnDirection) {
@@ -225,25 +220,25 @@ export default class Referee {
     private isValidKingMove(px: number, py: number, x: number, y: number, team: TeamType, boardState: Piece[], castlingRights?: { whiteKingSide: boolean; whiteQueenSide: boolean; blackKingSide: boolean; blackQueenSide: boolean; }): boolean {
         const xDistance = Math.abs(x - px);
         const yDistance = Math.abs(y - py);
-    
+
         if (xDistance <= 1 && yDistance <= 1) {
             return true;
         }
-    
+
         if (castlingRights && xDistance === 2 && yDistance === 0) {
             if ((team === TeamType.OUR && py !== 0) || (team === TeamType.OPPONENTS && py !== 7)) {
                 return false;
             }
             if (px !== 4) return false;
-    
+
             if (this.isKingInCheck(team, boardState)) return false;
-    
+
             const isKingSide = x > px;
             const rookX = isKingSide ? 7 : 0;
             const castlingPath = isKingSide ? [5, 6] : [1, 2, 3];
             const finalKingX = isKingSide ? 6 : 2;
             const finalRookX = isKingSide ? 5 : 3;
-    
+
             if (team === TeamType.OUR) {
                 if (isKingSide && !castlingRights.whiteKingSide) return false;
                 if (!isKingSide && !castlingRights.whiteQueenSide) return false;
@@ -252,10 +247,10 @@ export default class Referee {
                 if (!isKingSide && !castlingRights.blackQueenSide) return false;
             }
 
-            const rook = boardState.find(p => 
-                p.x === rookX && 
-                p.y === py && 
-                p.type === PieceType.ROOK && 
+            const rook = boardState.find(p =>
+                p.x === rookX &&
+                p.y === py &&
+                p.type === PieceType.ROOK &&
                 p.team === team
             );
             if (!rook) return false;
@@ -265,7 +260,7 @@ export default class Referee {
                     return false;
                 }
             }
-    
+
             for (const pathX of [px, ...castlingPath]) {
                 const simulatedBoard = boardState.map(p => ({ ...p }));
                 const kingPiece = simulatedBoard.find(p => p.type === PieceType.KING && p.team === team);
@@ -276,11 +271,11 @@ export default class Referee {
                     }
                 }
             }
-    
+
             const finalBoard = boardState.map(p => ({ ...p }));
             const kingPiece = finalBoard.find(p => p.type === PieceType.KING && p.team === team);
             const rookPiece = finalBoard.find(p => p.x === rookX && p.y === py);
-            
+
             if (kingPiece && rookPiece) {
                 kingPiece.x = finalKingX;
                 rookPiece.x = finalRookX;
@@ -288,10 +283,10 @@ export default class Referee {
                     return false;
                 }
             }
-    
+
             return true;
         }
-    
+
         return false;
     }
 }
