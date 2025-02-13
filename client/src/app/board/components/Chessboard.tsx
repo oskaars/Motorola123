@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, forwardRef, ForwardedRef} from "react";
 import { JSX } from "react/jsx-runtime";
 import Tile from "./Tile";
 import Referee from "../referee/referee";
@@ -94,8 +94,7 @@ function getPieceType(symbol: string): PieceType {
 function isInsideBoard(x: number, y: number): boolean {
   return x >= 0 && x < 8 && y >= 0 && y < 8;
 }
-
-export default function Chessboard() {
+  const Chessboard = forwardRef((props, ref: ForwardedRef<any>) => {
   const [pieces, setPieces] = useState<Piece[]>(loadPositionFromFEN(startFEN));
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
   const [gridX, setGridX] = useState(0);
@@ -111,6 +110,32 @@ export default function Chessboard() {
   const [promotionPawn, setPromotionPawn] = useState<Piece | null>(null);
   const [promotionPosition, setPromotionPosition] = useState<Position | null>(null);
 	const [isPromoting, setIsPromoting] = useState(false);
+
+  useEffect(() => {
+    if (ref) {
+      (ref as any).current = {
+        executeNotationMove: (notation: string) => {
+          return executeMove(notation);
+        }
+      };
+    }
+  }, [pieces, currentTurn]);
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (activePiece) {
+        activePiece.style.position = "relative";
+        activePiece.style.removeProperty("top");
+        activePiece.style.removeProperty("left");
+        setActivePiece(null);
+      }
+    };
+  
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [activePiece]);
 
   useEffect(() => {
     if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
@@ -190,6 +215,24 @@ export default function Chessboard() {
   }
 
   function movePiece(e: React.MouseEvent) {
+    if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
+      return;
+    }
+    
+    const chessboard = chessboardRef.current;
+    if (activePiece && chessboard) {
+      const minX = chessboard.offsetLeft;
+      const minY = chessboard.offsetTop;
+      const maxX = chessboard.offsetLeft + chessboard.clientWidth - 100;
+      const maxY = chessboard.offsetTop + chessboard.clientHeight - 100;
+      
+      const x = Math.min(Math.max(e.clientX - 50, minX), maxX);
+      const y = Math.min(Math.max(e.clientY - 50, minY), maxY);
+  
+      activePiece.style.position = "absolute";
+      activePiece.style.left = `${x}px`;
+      activePiece.style.top = `${y}px`;
+    }
     if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
       return;
     }
@@ -340,7 +383,10 @@ export default function Chessboard() {
                 return p;
               })
               .filter((p): p is Piece => p !== null);
-          
+            const isCapture = pieces.some(p => p.x === x && p.y === y);
+            const moveNotation = getAlgebraicNotation(currentPiece, gridX, gridY, x, y, isCapture);
+            console.log(`${moveNotation} (promoting)`);
+
             setPieces(updatedPieces);
             setPromotionPawn(snappedPawn);
             setPromotionPosition({ x, y });
@@ -377,6 +423,17 @@ export default function Chessboard() {
                 return piece;
           })
         .filter((piece): piece is Piece => piece !== null);
+
+        const isCapture = pieces.some(p => p.x === x && p.y === y);
+        const moveNotation = getAlgebraicNotation(
+          currentPiece,
+          gridX,
+          gridY,
+          x,
+          y,
+          isCapture
+        );
+        console.log(moveNotation);
 
         if (
           currentPiece.type === PieceType.PAWN &&
@@ -532,11 +589,13 @@ export default function Chessboard() {
 		const y = promotionPosition.y;
 
 		const updatedPieces = pieces.map(p => {
-			if (p === promotionPawn) {
-				return { ...p, type: pieceType, image: image, x: x, y: y };
-			}
-			return p;
-		});
+      if (p === promotionPawn) {
+        return { ...p, type: pieceType, image: image, x: x, y: y };
+      }
+      return p;
+    });
+    const moveNotation = getAlgebraicNotation(promotionPawn, promotionPawn.x, promotionPawn.y, x, y, false, pieceType);
+    console.log(moveNotation);
 		setPieces(updatedPieces);
 		setIsPromoting(false);
 		setPromotionPawn(null);
@@ -560,6 +619,189 @@ export default function Chessboard() {
 				return "";
 		}
 	};
+
+  function getAlgebraicNotation(
+    piece: Piece,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    isCapture: boolean,
+    promotionType?: PieceType
+  ): string {
+    const pieceSymbol = getPieceSymbol(piece.type);
+    const fromSquare = `${horizontalAxis[fromX]}${verticalAxis[fromY]}`;
+    const toSquare = `${horizontalAxis[toX]}${verticalAxis[toY]}`;
+    const captureNotation = isCapture ? 'x' : '';
+  
+    if (piece.type === PieceType.KING && Math.abs(toX - fromX) === 2) {
+      return toX > fromX ? 'O-O' : 'O-O-O';
+    }
+  
+    if (piece.type === PieceType.PAWN && isCapture) {
+      return `${horizontalAxis[fromX]}${captureNotation}${toSquare}`;
+    }
+  
+    if (piece.type === PieceType.PAWN) {
+      const promotionSuffix = promotionType ? `=${getPieceSymbol(promotionType)}` : '';
+      return `${fromSquare}${toSquare}${promotionSuffix}`;
+    }
+    return `${pieceSymbol}${fromSquare}${captureNotation}${toSquare}`;
+  }
+  
+  function getPieceSymbol(type: PieceType): string {
+    switch (type) {
+      case PieceType.KING: return 'K';
+      case PieceType.QUEEN: return 'Q';
+      case PieceType.ROOK: return 'R';
+      case PieceType.BISHOP: return 'B';
+      case PieceType.KNIGHT: return 'N';
+      case PieceType.PAWN: return '';
+      default: return '';
+    }
+  }
+  
+  function executeMove(moveNotation: string): boolean {
+    const regex = /^([a-h][1-8])([a-h][1-8])(=[QRBN])?$/;
+    const match = moveNotation.match(regex);
+    
+    if (!match) return false;
+    
+    const [, from, to, promotion] = match;
+    const fromX = horizontalAxis.indexOf(from[0]);
+    const fromY = verticalAxis.indexOf(from[1]);
+    const toX = horizontalAxis.indexOf(to[0]);
+    const toY = verticalAxis.indexOf(to[1]);
+    
+    const piece = pieces.find(p => p.x === fromX && p.y === fromY);
+    
+    if (!piece) return false;
+    
+    const validMove = referee.isValidMove(fromX, fromY, toX, toY, piece.type, piece.team, pieces, enPassantTarget);
+    
+    if (validMove) {
+      const updatedPieces = pieces.map(p => {
+        if (p === piece) {
+          return { ...p, x: toX, y: toY };
+        }
+        if (p.x === toX && p.y === toY) {
+          return null;
+        }
+        return p;
+      }).filter((p): p is Piece => p !== null);
+  
+      if (promotion) {
+        const promotionType = getPromotionTypeFromSymbol(promotion[1]);
+        if (promotionType !== undefined) {
+          const promotedPiece = updatedPieces.find(p => p.x === toX && p.y === toY);
+          if (promotedPiece) {
+            promotedPiece.type = promotionType;
+            promotedPiece.image = piece.team === TeamType.OUR ? 
+              getPieceImage(promotionType, true) : 
+              getPieceImage(promotionType, false);
+          }
+        }
+      }
+  
+      setPieces(updatedPieces);
+      setCurrentTurn(currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  function getPromotionTypeFromSymbol(symbol: string): PieceType | undefined {
+    switch (symbol) {
+      case 'Q': return PieceType.QUEEN;
+      case 'R': return PieceType.ROOK;
+      case 'B': return PieceType.BISHOP;
+      case 'N': return PieceType.KNIGHT;
+      default: return undefined;
+    }
+  }
+  
+  function getPieceImage(type: PieceType, isWhite: boolean): string {
+    switch (type) {
+      case PieceType.QUEEN: return isWhite ? pieceImages.Q : pieceImages.q;
+      case PieceType.ROOK: return isWhite ? pieceImages.R : pieceImages.r;
+      case PieceType.BISHOP: return isWhite ? pieceImages.B : pieceImages.b;
+      case PieceType.KNIGHT: return isWhite ? pieceImages.N : pieceImages.n;
+      default: return '';
+    }
+  }
+
+  function executeNotationMove(notation: string): boolean {
+    // Handle castling
+    if (notation === 'O-O' || notation === 'O-O-O') {
+      const team = currentTurn;
+      const rank = team === TeamType.OUR ? 0 : 7;
+      const king = pieces.find(p => 
+        p.x === 4 && 
+        p.y === rank && 
+        p.type === PieceType.KING && 
+        p.team === team
+      );
+      
+      if (king) {
+        const isKingSide = notation === 'O-O';
+        const rookX = isKingSide ? 7 : 0;
+        const rook = pieces.find(
+          p => p.x === rookX && 
+          p.y === rank && 
+          p.type === PieceType.ROOK && 
+          p.team === team
+        );
+  
+        if (rook) {
+          const newKingX = isKingSide ? 6 : 2;
+          const newRookX = isKingSide ? 5 : 3;
+          const castlingPath = isKingSide ? [5, 6] : [1, 2, 3];
+  
+          const isPathClear = castlingPath.every(
+            pathX => !pieces.find(p => p.x === pathX && p.y === rank)
+          );
+  
+          if (isPathClear) {
+            const updatedPieces = pieces.map(p => {
+              if (p === king) {
+                return { ...p, x: newKingX };
+              }
+              if (p === rook) {
+                return { ...p, x: newRookX };
+              }
+              return p;
+            });
+  
+            setPieces(updatedPieces);
+            
+            // Update castling rights
+            if (team === TeamType.OUR) {
+              setCastlingRights({
+                ...castlingRights,
+                whiteKingSide: false,
+                whiteQueenSide: false,
+              });
+            } else {
+              setCastlingRights({
+                ...castlingRights,
+                blackKingSide: false,
+                blackQueenSide: false,
+              });
+            }
+            
+            setCurrentTurn(currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR);
+            console.log(notation); // Log the castling move
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+  
+    // For non-castling moves, use the existing executeMove function
+    return executeMove(notation);
+  }
 
   return (
     <div
@@ -600,3 +842,5 @@ export default function Chessboard() {
     </div>
   );
 }
+  );
+  export default Chessboard;
