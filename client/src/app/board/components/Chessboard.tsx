@@ -363,13 +363,11 @@ export default function Chessboard() {
                   enPassantTarget &&
                   x === enPassantTarget.x &&
                   y === enPassantTarget.y
-                  ) {
-                if (
-                  piece.x === x &&
-                  piece.y === (currentPiece.team === TeamType.OUR ? y + 1 : y - 1)
-                  ) {
+                ) {
+                  const capturedPawnY = currentPiece.team === TeamType.OUR ? y - 1 : y + 1;
+                  if (piece.x === x && piece.y === capturedPawnY) {
                     return null;
-                    }
+                  }
                 }
 
                 if (piece.x === x && piece.y === y) {
@@ -377,18 +375,18 @@ export default function Chessboard() {
                 }
 
                 return piece;
-                })
-                .filter((piece): piece is Piece => piece !== null);
+          })
+        .filter((piece): piece is Piece => piece !== null);
 
-          if (
-            currentPiece.type === PieceType.PAWN &&
-            Math.abs(gridY - y) === 2
-          ) {
-            const enPassantY = (gridY + y) / 2;
-            setEnPassantTarget({ x, y: enPassantY });
-          } else {
-            setEnPassantTarget(null);
-          }
+        if (
+          currentPiece.type === PieceType.PAWN &&
+          Math.abs(gridY - y) === 2
+        ) {
+          const enPassantY = (gridY + y) / 2;
+          setEnPassantTarget({ x, y: enPassantY });
+        } else {
+          setEnPassantTarget(null);
+        }
 
           const nextTurn =
             currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR;
