@@ -332,15 +332,23 @@ export default function Chessboard() {
 
         if (validMove) {
           if (isPawnPromotionMove(currentPiece, x, y)) {
-						const pieceToRemove = pieces.find(p => p.x === x && p.y ===y);
-						if(pieceToRemove){
-							const updatedPieces = pieces.filter(p => p !== pieceToRemove);
-							setPieces(updatedPieces);
-						}
-						setPromotionPawn(currentPiece);
-						setPromotionPosition({ x, y });
-						setIsPromoting(true);
-						setActivePiece(null);
+            const snappedPawn = { ...currentPiece, x, y };
+            const updatedPieces = pieces
+              .map(p => {
+                if (p.x === x && p.y === y) return null;
+                if (p === currentPiece) return snappedPawn;
+                return p;
+              })
+              .filter((p): p is Piece => p !== null);
+          
+            setPieces(updatedPieces);
+            setPromotionPawn(snappedPawn);
+            setPromotionPosition({ x, y });
+            setIsPromoting(true);
+            activePiece.style.position = "relative";
+            activePiece.style.removeProperty("top");
+            activePiece.style.removeProperty("left");
+            setActivePiece(null);
             return;
           }
 
