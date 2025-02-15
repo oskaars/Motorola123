@@ -22,18 +22,18 @@ export interface CastlingRights {whiteKingSide: boolean; whiteQueenSide: boolean
 const startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 const pieceImages = {
-  p: "pawns/BlackPawn.svg",
-  r: "pawns/BlackRook.svg",
-  n: "pawns/BlackKnight.svg",
-  b: "pawns/BlackBishop.svg",
-  q: "pawns/BlackQueen.svg",
-  k: "pawns/BlackKing.svg",
-  P: "pawns/WhitePawn.svg",
-  R: "pawns/WhiteRook.svg",
-  N: "pawns/WhiteKnight.svg",
-  B: "pawns/WhiteBishop.svg",
-  Q: "pawns/WhiteQueen.svg",
-  K: "pawns/WhiteKing.svg",
+  p: "/pawns/BlackPawn.svg",
+  r: "/pawns/BlackRook.svg",
+  n: "/pawns/BlackKnight.svg",
+  b: "/pawns/BlackBishop.svg",
+  q: "/pawns/BlackQueen.svg",
+  k: "/pawns/BlackKing.svg",
+  P: "/pawns/WhitePawn.svg",
+  R: "/pawns/WhiteRook.svg",
+  N: "/pawns/WhiteKnight.svg",
+  B: "/pawns/WhiteBishop.svg",
+  Q: "/pawns/WhiteQueen.svg",
+  K: "/pawns/WhiteKing.svg",
 };
 
 function loadPositionFromFEN(fen: string): Piece[] {
