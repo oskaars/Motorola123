@@ -1,12 +1,30 @@
-import Multiplayer from '../components/Multiplayer';
 
-const Home: React.FC = () => {
+"use client";
+import Multiplayer from '../components/Multiplayer';
+import { NextPage } from 'next';
+import Chessboard from '../components/Chessboard';
+import { useRef, useEffect } from 'react';
+
+const Board: NextPage = () => {
+  const chessboardRef = useRef<any>(null);
+
+  useEffect(() => {
+    (window as any).chess = {
+      move: (notation: string) => {
+        if (chessboardRef.current) {
+          return chessboardRef.current.executeNotationMove(notation);
+        }
+        return false;
+      }
+    };
+  }, []);
+
   return (
-    <div className="container mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Chess Over LAN</h1>
+    <div className="grid place-content-center  bg-[#1a1a1a] pt-[5vh]">
+      <Chessboard ref={chessboardRef} />
       <Multiplayer />
     </div>
   );
 };
 
-export default Home;
+export default Board;
