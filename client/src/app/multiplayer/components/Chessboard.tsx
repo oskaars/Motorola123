@@ -504,40 +504,40 @@ function isInsideBoard(x: number, y: number): boolean {
         if (piece) {
           let pieceChar = "";
           switch (piece.image) {
-            case "pawns/BlackPawn.svg":
+            case "/pawns/BlackPawn.svg":
               pieceChar = "p";
               break;
-            case "pawns/WhitePawn.svg":
+            case "/pawns/WhitePawn.svg":
               pieceChar = "P";
               break;
-            case "pawns/BlackRook.svg":
+            case "/pawns/BlackRook.svg":
               pieceChar = "r";
               break;
-            case "pawns/WhiteRook.svg":
+            case "/pawns/WhiteRook.svg":
               pieceChar = "R";
               break;
-            case "pawns/BlackKnight.svg":
+            case "/pawns/BlackKnight.svg":
               pieceChar = "n";
               break;
-            case "pawns/WhiteKnight.svg":
+            case "/pawns/WhiteKnight.svg":
               pieceChar = "N";
               break;
-            case "pawns/BlackBishop.svg":
+            case "/pawns/BlackBishop.svg":
               pieceChar = "b";
               break;
-            case "pawns/WhiteBishop.svg":
+            case "/pawns/WhiteBishop.svg":
               pieceChar = "B";
               break;
-            case "pawns/BlackQueen.svg":
+            case "/pawns/BlackQueen.svg":
               pieceChar = "q";
               break;
-            case "pawns/WhiteQueen.svg":
+            case "/pawns/WhiteQueen.svg":
               pieceChar = "Q";
               break;
-            case "pawns/BlackKing.svg":
+            case "/pawns/BlackKing.svg":
               pieceChar = "k";
               break;
-            case "pawns/WhiteKing.svg":
+            case "/pawns/WhiteKing.svg":
               pieceChar = "K";
               break;
             default:
