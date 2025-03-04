@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import WebSocketClient from '../websocket';
 
+
 const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> = (props) => {
   const [client] = useState(new WebSocketClient());
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -29,13 +30,18 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
       setRoomId(null);
       if (props.onJoinStatusChange) props.onJoinStatusChange(false); // Wysłanie statusu
     };
+    const handleUserList = (data: { usernames: string[] }) => {
+      setUsernames(data.usernames);
+    }
 
     client.addEventListener('ROOM_CREATED', handleRoomCreated);
     client.addEventListener('JOINED_ROOM', handleJoinedRoom);
+    client.addEventListener('USER_LIST', handleUserList);
 
     return () => {
       client.removeEventListener('ROOM_CREATED', handleRoomCreated);
       client.removeEventListener('JOINED_ROOM', handleJoinedRoom);
+      client.removeEventListener('USER_LIST', handleUserList)
     };
   }, [client, props]);
 
