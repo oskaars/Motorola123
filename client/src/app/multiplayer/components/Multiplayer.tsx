@@ -1,150 +1,222 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import WebSocketClient from '../websocket';
+import React, { useState, useEffect, useRef } from "react";
+import WebSocketClient from "../websocket";
+import Chessboard from "@/app/Chessboard";
 
+// Define proper interface for chessboard ref
+interface ChessboardRef {
+  executeNotationMove: (notation: string) => boolean;
+}
 
 const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> = (props) => {
   const [client] = useState(new WebSocketClient());
   const [roomId, setRoomId] = useState<string | null>(null);
-  const [message, setMessage] = useState('');
   const [joined, setJoined] = useState(false);
-  const [messages, setMessages] = useState<{ sender: string; message: string }[]>([]);
-  const [usernames, setUsernames] = useState<string[]>([]);
-  const [username, setUsername] = useState<string>('');
+  const [username, setUsername] = useState<string>("");
+  const [messages, setMessages] = useState<{sender: string; text: string}[]>([]);
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [moveInput, setMoveInput] = useState("");
+
+  const chessboardRef = useRef<ChessboardRef>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleRoomCreated = (data: { roomId: string }) => {
       setRoomId(data.roomId);
       setJoined(true);
-      if (props.onJoinStatusChange) props.onJoinStatusChange(true); // Wysłanie statusu
+      setMessages([{sender: "System", text: `Room created with ID: ${data.roomId}`}]);
+      if (props.onJoinStatusChange) props.onJoinStatusChange(true);
     };
 
     const handleJoinedRoom = (data: { roomId: string }) => {
       setRoomId(data.roomId);
       setJoined(true);
-      if (props.onJoinStatusChange) props.onJoinStatusChange(true); // Wysłanie statusu
+      setMessages([{sender: "System", text: `Joined room: ${data.roomId}`}]);
+      if (props.onJoinStatusChange) props.onJoinStatusChange(true);
     };
 
-    const handleLeaveRoom = () => {
-      setJoined(false);
-      setRoomId(null);
-      if (props.onJoinStatusChange) props.onJoinStatusChange(false); // Wysłanie statusu
+    const handleOpponentMove = (data: { notation: string, sender?: string }) => {
+      console.log("Received opponent move:", data.notation);
+      if (chessboardRef.current) {
+        chessboardRef.current.executeNotationMove(data.notation);
+        setMessages(prev => [...prev, {
+          sender: data.sender || "Opponent",
+          text: `Made move: ${data.notation}`
+        }]);
+      }
     };
-    const handleUserList = (data: { usernames: string[] }) => {
-      setUsernames(data.usernames);
-    }
 
-    client.addEventListener('ROOM_CREATED', handleRoomCreated);
-    client.addEventListener('JOINED_ROOM', handleJoinedRoom);
-    client.addEventListener('USER_LIST', handleUserList);
+    const handleChatMessage = (data: { sender: string, message: string }) => {
+      setMessages(prev => [...prev, { sender: data.sender, text: data.message }]);
+    };
+
+    client.addEventListener("ROOM_CREATED", handleRoomCreated);
+    client.addEventListener("JOINED_ROOM", handleJoinedRoom);
+    client.addEventListener("MAKE_MOVE", handleOpponentMove);
+    client.addEventListener("CHAT_MESSAGE", handleChatMessage);
 
     return () => {
-      client.removeEventListener('ROOM_CREATED', handleRoomCreated);
-      client.removeEventListener('JOINED_ROOM', handleJoinedRoom);
-      client.removeEventListener('USER_LIST', handleUserList)
+      client.removeEventListener("ROOM_CREATED", handleRoomCreated);
+      client.removeEventListener("JOINED_ROOM", handleJoinedRoom);
+      client.removeEventListener("MAKE_MOVE", handleOpponentMove);
+      client.removeEventListener("CHAT_MESSAGE", handleChatMessage);
     };
   }, [client, props]);
 
+  // Scroll to bottom of chat when messages change
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleCreateRoom = () => {
+    if (!username.trim()) {
+      alert("Please enter a username");
+      return;
+    }
     client.createRoom(username);
   };
 
   const handleJoinRoom = () => {
+    if (!username.trim()) {
+      alert("Please enter a username");
+      return;
+    }
     if (roomId) {
       client.joinRoom(roomId, username);
-      setJoined(true);
+    } else {
+      alert("Please enter a room ID");
     }
   };
 
-  const handleSendMessage = () => {
-    if (roomId) {
-      client.sendMessage(roomId, message, username);
-      setMessage('');
+  const handleSendMove = () => {
+    if (roomId && moveInput.trim()) {
+      client.sendMove(roomId, moveInput);
+      if (chessboardRef.current) {
+        const success = chessboardRef.current.executeNotationMove(moveInput);
+        if (success) {
+          setMessages(prev => [...prev, {
+            sender: username,
+            text: `Made move: ${moveInput}`
+          }]);
+          setMoveInput("");
+        } else {
+          setMessages(prev => [...prev, {
+            sender: "System",
+            text: `Invalid move: ${moveInput}`
+          }]);
+        }
+      }
     }
   };
 
-  const handleLeaveRoom = () => {
-    client.leaveRoom();
-    setRoomId(null);
-    setJoined(false);
-    setUsernames([]);
-    setMessages([]);
-  };
-
-  const handleCopyToClipboard = () => {
-    if (roomId) {
-      navigator.clipboard.writeText(roomId);
+  const handleSendChat = () => {
+    if (roomId && currentMessage.trim()) {
+      client.sendMessage(roomId, currentMessage, username);
+      setMessages(prev => [...prev, { sender: username, text: currentMessage }]);
+      setCurrentMessage("");
     }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="p-4 max-w-md mx-auto bg-white rounded-xl shadow-md space-y-4 text-black">
-        {!joined && (
-          <div className="mb-4">
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your name"
-              className="p-2 border rounded w-full"
-            />
-          </div>
-        )}
-        {roomId && (
-          <div className="text-2xl font-bold text-center mb-4">
-            Room Code: {roomId.toUpperCase()}
-            <button onClick={handleCopyToClipboard} className="ml-2 bg-gray-300 text-black px-2 py-1 rounded">Copy</button>
-          </div>
-        )}
-        {!joined && (
-          <div className="grid grid-cols-2 gap-4">
-            <button onClick={handleCreateRoom} className="bg-blue-500 text-white px-4 py-2 rounded">Create Room</button>
-            <div className="flex items-center">
+      {!joined ? (
+        <div className="p-6 max-w-md mx-auto bg-white rounded-xl shadow-md space-y-4 text-black">
+          <h2 className="text-xl font-bold mb-4">Join a Chess Room</h2>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your username"
+            className="p-2 border rounded w-full mb-4"
+          />
+          <div className="space-y-4">
+            <button
+              onClick={handleCreateRoom}
+              className="bg-blue-500 text-white px-4 py-2 rounded w-full"
+            >
+              Create New Room
+            </button>
+            <div className="flex flex-col space-y-2">
               <input
                 type="text"
-                value={roomId || ''}
+                value={roomId || ""}
                 onChange={(e) => setRoomId(e.target.value)}
                 placeholder="Room ID"
                 className="p-2 border rounded w-full"
               />
-              <button onClick={handleJoinRoom} className="bg-green-500 text-white px-4 py-2 rounded ml-2">Join Room</button>
+              <button
+                onClick={handleJoinRoom}
+                className="bg-green-500 text-white px-4 py-2 rounded w-full"
+              >
+                Join Existing Room
+              </button>
             </div>
           </div>
-        )}
-        {joined && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Message"
-                className="p-2 border rounded w-full text-black"
-              />
-              <button onClick={handleSendMessage} className="bg-yellow-500 text-white px-4 py-2 rounded">Send Message</button>
+        </div>
+      ) : (
+        <div className="p-4 bg-white rounded-xl shadow-xl grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <h2 className="text-xl font-bold mb-2 text-black">Chess Game</h2>
+            <div className="mb-4">
+              <Chessboard ref={chessboardRef} />
             </div>
-            <div className="mt-4">
-              <h2 className="text-xl font-bold">Messages:</h2>
-              <ul className="list-disc list-inside">
-                {messages.map((msg, index) => (
-                  <li key={index}><strong>{msg.sender}:</strong> {msg.message}</li>
+          </div>
+
+          <div className="bg-gray-50 rounded p-4 flex flex-col h-full">
+            <h3 className="text-lg font-semibold mb-2 text-black">Game Room: {roomId}</h3>
+
+            <div className="flex-grow overflow-hidden flex flex-col">
+              <div
+                ref={chatContainerRef}
+                className="flex-grow overflow-y-auto mb-4 p-2 bg-white border rounded"
+                style={{ maxHeight: "500px" }}
+              >
+                {messages.map((msg, idx) => (
+                  <div key={idx} className={`mb-2 ${msg.sender === username ? "text-blue-600" : "text-black"}`}>
+                    <span className="font-bold">{msg.sender}: </span>
+                    <span>{msg.text}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={moveInput}
+                    onChange={(e) => setMoveInput(e.target.value)}
+                    placeholder="Enter move (e.g., e2e4)"
+                    className="p-2 border rounded flex-grow"
+                  />
+                  <button
+                    onClick={handleSendMove}
+                    className="bg-green-500 text-white px-4 py-2 rounded whitespace-nowrap"
+                  >
+                    Send Move
+                  </button>
+                </div>
+
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleSendChat()}
+                    placeholder="Type a message..."
+                    className="p-2 border rounded flex-grow"
+                  />
+                  <button
+                    onClick={handleSendChat}
+                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
             </div>
-          </>
-        )}
-        <button onClick={handleLeaveRoom} className="bg-red-500 text-white px-4 py-2 rounded w-full">Leave Room</button>
-      </div>
-      {joined && (
-        <div className="p-4 max-w-md mx-auto bg-white rounded-xl shadow-md space-y-4 text-black ml-4">
-          <h2 className="text-xl font-bold">Users in Room:</h2>
-          <ul className="list-disc list-inside">
-            {usernames.map((username, index) => (
-              <li key={index}>{username}</li>
-            ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>
