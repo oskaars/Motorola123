@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import WebSocketClient from '../websocket';
 
-const Multiplayer: React.FC = () => {
+const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> = (props) => {
   const [client] = useState(new WebSocketClient());
   const [roomId, setRoomId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [joined, setJoined] = useState(false);
-  const [messages, setMessages] = useState<{ sender: string, message: string }[]>([]);
+  const [messages, setMessages] = useState<{ sender: string; message: string }[]>([]);
   const [usernames, setUsernames] = useState<string[]>([]);
   const [username, setUsername] = useState<string>('');
 
@@ -15,33 +15,30 @@ const Multiplayer: React.FC = () => {
     const handleRoomCreated = (data: { roomId: string }) => {
       setRoomId(data.roomId);
       setJoined(true);
+      if (props.onJoinStatusChange) props.onJoinStatusChange(true); // Wysłanie statusu
     };
 
     const handleJoinedRoom = (data: { roomId: string }) => {
       setRoomId(data.roomId);
       setJoined(true);
+      if (props.onJoinStatusChange) props.onJoinStatusChange(true); // Wysłanie statusu
     };
 
-    const handleUserList = (data: { usernames: string[] }) => {
-      setUsernames(data.usernames);
-    };
-
-    const handleMessage = (data: { sender: string, message: string }) => {
-      setMessages(prevMessages => [...prevMessages, { sender: data.sender, message: data.message }]);
+    const handleLeaveRoom = () => {
+      setJoined(false);
+      setRoomId(null);
+      if (props.onJoinStatusChange) props.onJoinStatusChange(false); // Wysłanie statusu
     };
 
     client.addEventListener('ROOM_CREATED', handleRoomCreated);
     client.addEventListener('JOINED_ROOM', handleJoinedRoom);
-    client.addEventListener('USER_LIST', handleUserList);
-    client.addEventListener('MESSAGE', handleMessage);
 
     return () => {
       client.removeEventListener('ROOM_CREATED', handleRoomCreated);
       client.removeEventListener('JOINED_ROOM', handleJoinedRoom);
-      client.removeEventListener('USER_LIST', handleUserList);
-      client.removeEventListener('MESSAGE', handleMessage);
     };
-  }, [client]);
+  }, [client, props]);
+
 
   const handleCreateRoom = () => {
     client.createRoom(username);

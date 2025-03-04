@@ -2,11 +2,15 @@
 "use client";
 import Multiplayer from '../components/Multiplayer';
 import { NextPage } from 'next';
-import Chessboard from '../components/Chessboard';
-import { useRef, useEffect } from 'react';
+import Chessboard from '../../Chessboard';
+import { useRef, useEffect, useState } from 'react';
 
 const Board: NextPage = () => {
   const chessboardRef = useRef<any>(null);
+  const [joined, setJoined] = useState(false);
+  const handleJoinStatus = (status: boolean) => {
+    setJoined(status);
+  };
 
   useEffect(() => {
     (window as any).chess = {
@@ -20,11 +24,12 @@ const Board: NextPage = () => {
   }, []);
 
   return (
-    <div className="grid place-content-center  bg-[#1a1a1a] pt-[5vh]">
-      <Chessboard ref={chessboardRef} />
-      <Multiplayer />
+    <div>
+      <Multiplayer onJoinStatusChange={handleJoinStatus} />
+      {joined && <Chessboard ref={chessboardRef} />}
     </div>
   );
 };
+
 
 export default Board;

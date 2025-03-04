@@ -1,7 +1,7 @@
 "use client";
 import React, { useRef, useState, useEffect, forwardRef, ForwardedRef} from "react";
 import { JSX } from "react/jsx-runtime";
-import Tile from "./Tile";
+import Tile from "./multiplayer/components/Tile";
 import Referee from "@/app/multiplayer/referee/referee";
 
 const verticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
