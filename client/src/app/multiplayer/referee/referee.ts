@@ -1,4 +1,4 @@
-import { PieceType, TeamType, Piece, Position } from '../../Chessboard';
+import { PieceType, TeamType, Piece, Position } from '../components/Chessboard';
 
 export default class Referee {
     getCastlingRookMove(kingFromX: number, kingToX: number, kingY: number): { fromX: number; toX: number } | null {

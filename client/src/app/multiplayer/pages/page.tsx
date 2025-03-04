@@ -1,4 +1,3 @@
-
 "use client";
 import Multiplayer from '../components/Multiplayer';
 import { NextPage } from 'next';
@@ -24,12 +23,10 @@ const Board: NextPage = () => {
   }, []);
 
   return (
-    <div>
+    <div className="container mx-auto p-4">
       <Multiplayer onJoinStatusChange={handleJoinStatus} />
-      {joined && <Chessboard ref={chessboardRef} />}
     </div>
   );
-};
 
-
+}
 export default Board;
