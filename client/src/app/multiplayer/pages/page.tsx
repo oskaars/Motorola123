@@ -23,7 +23,7 @@ const Board: NextPage = () => {
   }, []);
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <Multiplayer onJoinStatusChange={handleJoinStatus} />
     </div>
   );

@@ -188,7 +188,7 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
                     value={moveInput}
                     onChange={(e) => setMoveInput(e.target.value)}
                     placeholder="Enter move (e.g., e2e4)"
-                    className="p-2 border rounded flex-grow"
+                    className="p-2 border rounded flex-grow black enabled:text-black"
                   />
                   <button
                     onClick={handleSendMove}
@@ -205,7 +205,7 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
                     onChange={(e) => setCurrentMessage(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleSendChat()}
                     placeholder="Type a message..."
-                    className="p-2 border rounded flex-grow"
+                    className="p-2 border rounded flex-grow enabled:text-black"
                   />
                   <button
                     onClick={handleSendChat}
