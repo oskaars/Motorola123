@@ -94,7 +94,11 @@ function getPieceType(symbol: string): PieceType {
 function isInsideBoard(x: number, y: number): boolean {
   return x >= 0 && x < 8 && y >= 0 && y < 8;
 }
-  const Chessboard = forwardRef((props, ref: ForwardedRef<any>) => {
+
+  interface ChessboardProps {
+  onGameStateChange?: (state: GameState, team: TeamType | null) => void;
+}
+const Chessboard = forwardRef((props: ChessboardProps, ref: ForwardedRef<any>) => {
   const [pieces, setPieces] = useState<Piece[]>(loadPositionFromFEN(startFEN));
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
   const [gridX, setGridX] = useState(0);
@@ -137,22 +141,28 @@ function isInsideBoard(x: number, y: number): boolean {
     };
   }, [activePiece]);
 
-  useEffect(() => {
-    if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
-      return;
-    }
+    useEffect(() => {
+      if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
+        return;
+      }
 
-    if (isInCheck) {
-      if (referee.isCheckmate(isInCheck, pieces)) {
-        setIsCheckmate(isInCheck);
-        setGameState(GameState.CHECKMATE);
+      if (isInCheck) {
+        if (referee.isCheckmate(isInCheck, pieces)) {
+          setIsCheckmate(isInCheck);
+          setGameState(GameState.CHECKMATE);
+          // Notify parent component
+          props.onGameStateChange?.(GameState.CHECKMATE, isInCheck);
+        } else {
+          // Notify parent about check
+          props.onGameStateChange?.(GameState.CHECK, isInCheck);
+        }
+      } else {
+        if (referee.isStalemate(currentTurn, pieces)) {
+          setGameState(GameState.STALEMATE);
+          props.onGameStateChange?.(GameState.STALEMATE, null);
+        }
       }
-    } else {
-      if (referee.isStalemate(currentTurn, pieces)) {
-        setGameState(GameState.STALEMATE);
-      }
-    }
-  }, [pieces, isInCheck, currentTurn, referee, gameState]);
+    }, [pieces, isInCheck, currentTurn, referee, gameState, props]);
 
   const generateBoard = () => {
     const boardSquares: JSX.Element[] = [];

@@ -17,9 +17,31 @@ wss.on('connection', (ws) => {
         break;
       case 'JOIN_ROOM':
         if (rooms[data.roomId]) {
-          rooms[data.roomId].push({ ws, username: data.username });
-          ws.send(JSON.stringify({ type: 'JOINED_ROOM', roomId: data.roomId }));
-          broadcastUserList(data.roomId);
+          if (rooms[data.roomId].length >= 2) {
+            ws.send(JSON.stringify({ type: 'ERROR', message: 'Room is full' }));
+          } else {
+            rooms[data.roomId].push({ ws, username: data.username });
+            ws.send(JSON.stringify({ type: 'JOINED_ROOM', roomId: data.roomId }));
+            broadcastUserList(data.roomId);
+
+            // Notify all users in the room about the new player
+            rooms[data.roomId].forEach(client => {
+              client.ws.send(JSON.stringify({
+                type: 'USER_JOINED',
+                username: data.username,
+              }));
+            });
+
+            // If the room is full, notify both players
+            if (rooms[data.roomId].length === 2) {
+              rooms[data.roomId].forEach(client => {
+                client.ws.send(JSON.stringify({
+                  type: 'ROOM_FULL',
+                  message: 'The room is now full. Game starting...',
+                }));
+              });
+            }
+          }
         } else {
           ws.send(JSON.stringify({ type: 'ERROR', message: 'Room not found' }));
         }
@@ -27,7 +49,22 @@ wss.on('connection', (ws) => {
       case 'SEND_MESSAGE':
         if (rooms[data.roomId]) {
           rooms[data.roomId].forEach(client => {
-            client.ws.send(JSON.stringify({ type: 'MESSAGE', message: data.message, sender: data.sender }));
+            client.ws.send(JSON.stringify({
+              type: 'MESSAGE',
+              message: data.message,
+              sender: data.sender }));
+          });
+        }
+        break;
+      case 'MAKE_MOVE':
+        if (rooms[data.roomId]) {
+          console.log(`Move made in room ${data.roomId}: ${data.notation} by ${data.sender}`);
+          rooms[data.roomId].forEach(client => {
+            client.ws.send(JSON.stringify({
+              type: 'OPPONENT_MOVE',
+              notation: data.notation,
+              sender: data.sender,
+            }));
           });
         }
         break;

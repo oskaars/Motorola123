@@ -1,9 +1,9 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import WebSocketClient from "../websocket";
-import Chessboard from "@/app/Chessboard";
+import Chessboard from "@/app/multiplayer/components/Chessboard";
+import { GameState, TeamType } from "@/app/multiplayer/components/Chessboard";
 
-// Define proper interface for chessboard ref
 interface ChessboardRef {
   executeNotationMove: (notation: string) => boolean;
 }
@@ -13,7 +13,7 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
   const [roomId, setRoomId] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const [username, setUsername] = useState<string>("");
-  const [messages, setMessages] = useState<{sender: string; text: string}[]>([]);
+  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [moveInput, setMoveInput] = useState("");
 
@@ -24,14 +24,14 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
     const handleRoomCreated = (data: { roomId: string }) => {
       setRoomId(data.roomId);
       setJoined(true);
-      setMessages([{sender: "System", text: `Room created with ID: ${data.roomId}`}]);
+      setMessages([{ sender: "System", text: `Room created with ID: ${data.roomId}` }]);
       if (props.onJoinStatusChange) props.onJoinStatusChange(true);
     };
 
     const handleJoinedRoom = (data: { roomId: string }) => {
       setRoomId(data.roomId);
       setJoined(true);
-      setMessages([{sender: "System", text: `Joined room: ${data.roomId}`}]);
+      setMessages([{ sender: "System", text: `Joined room: ${data.roomId}` }]);
       if (props.onJoinStatusChange) props.onJoinStatusChange(true);
     };
 
@@ -47,23 +47,29 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
     };
 
     const handleChatMessage = (data: { sender: string, message: string }) => {
+      console.log("Received chat message:", data); // Debugging
       setMessages(prev => [...prev, { sender: data.sender, text: data.message }]);
+    };
+
+    const handleRoomFull = (data: { message: string }) => {
+      setMessages(prev => [...prev, { sender: "System", text: data.message }]);
     };
 
     client.addEventListener("ROOM_CREATED", handleRoomCreated);
     client.addEventListener("JOINED_ROOM", handleJoinedRoom);
-    client.addEventListener("MAKE_MOVE", handleOpponentMove);
-    client.addEventListener("CHAT_MESSAGE", handleChatMessage);
+    client.addEventListener("OPPONENT_MOVE", handleOpponentMove);
+    client.addEventListener("MESSAGE", handleChatMessage);
+    client.addEventListener("ROOM_FULL", handleRoomFull);
 
     return () => {
       client.removeEventListener("ROOM_CREATED", handleRoomCreated);
       client.removeEventListener("JOINED_ROOM", handleJoinedRoom);
-      client.removeEventListener("MAKE_MOVE", handleOpponentMove);
-      client.removeEventListener("CHAT_MESSAGE", handleChatMessage);
+      client.removeEventListener("OPPONENT_MOVE", handleOpponentMove);
+      client.removeEventListener("MESSAGE", handleChatMessage);
+      client.removeEventListener("ROOM_FULL", handleRoomFull);
     };
   }, [client, props]);
 
-  // Scroll to bottom of chat when messages change
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -92,6 +98,7 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
 
   const handleSendMove = () => {
     if (roomId && moveInput.trim()) {
+      console.log(`Move made by ${username}: ${moveInput}`); // Debugging
       client.sendMove(roomId, moveInput);
       if (chessboardRef.current) {
         const success = chessboardRef.current.executeNotationMove(moveInput);
@@ -116,6 +123,25 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
       client.sendMessage(roomId, currentMessage, username);
       setMessages(prev => [...prev, { sender: username, text: currentMessage }]);
       setCurrentMessage("");
+    }
+  };
+
+  const handleGameStateChange = (state: GameState, team: TeamType | null) => {
+    if (state === GameState.CHECK) {
+      const teamName = team === TeamType.OUR ? "White" : "Black";
+      const message = `${teamName} is in check!`;
+      client.sendMessage(roomId!, message, "System");
+      setMessages(prev => [...prev, { sender: "System", text: message }]);
+    } else if (state === GameState.CHECKMATE) {
+      const teamName = team === TeamType.OUR ? "White" : "Black";
+      const winner = team === TeamType.OUR ? "Black" : "White";
+      const message = `Checkmate! ${teamName} is in checkmate. ${winner} wins!`;
+      client.sendMessage(roomId!, message, "System");
+      setMessages(prev => [...prev, { sender: "System", text: message }]);
+    } else if (state === GameState.STALEMATE) {
+      const message = "Stalemate! The game is a draw.";
+      client.sendMessage(roomId!, message, "System");
+      setMessages(prev => [...prev, { sender: "System", text: message }]);
     }
   };
 
@@ -160,7 +186,7 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
           <div className="lg:col-span-2">
             <h2 className="text-xl font-bold mb-2 text-black">Chess Game</h2>
             <div className="mb-4">
-              <Chessboard ref={chessboardRef} />
+              <Chessboard ref={chessboardRef} onGameStateChange={handleGameStateChange} />
             </div>
           </div>
 

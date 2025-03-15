@@ -35,7 +35,9 @@ const pieceImages = {
   Q: "/pawns/WhiteQueen.svg",
   K: "/pawns/WhiteKing.svg",
 };
-
+interface ChessboardProps {
+  onGameStateChange?: (state: GameState, team: TeamType | null) => void;
+}
 function loadPositionFromFEN(fen: string): Piece[] {
   const pieces: Piece[] = [];
   const fenBoard = fen.split(" ")[0];
@@ -94,7 +96,7 @@ function getPieceType(symbol: string): PieceType {
 function isInsideBoard(x: number, y: number): boolean {
   return x >= 0 && x < 8 && y >= 0 && y < 8;
 }
-  const Chessboard = forwardRef((props, ref: ForwardedRef<any>) => {
+  const Chessboard = forwardRef((props: ChessboardProps, ref: ForwardedRef<any>) => {
   const [pieces, setPieces] = useState<Piece[]>(loadPositionFromFEN(startFEN));
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
   const [gridX, setGridX] = useState(0);
@@ -110,7 +112,15 @@ function isInsideBoard(x: number, y: number): boolean {
   const [promotionPawn, setPromotionPawn] = useState<Piece | null>(null);
   const [promotionPosition, setPromotionPosition] = useState<Position | null>(null);
 	const [isPromoting, setIsPromoting] = useState(false);
-
+      useEffect(() => {
+        if (ref) {
+          (ref as any).current = {
+            executeNotationMove: (notation: string) => {
+              return executeMove(notation);
+            }
+          };
+        }
+      }, [pieces, currentTurn]);
   useEffect(() => {
     if (ref) {
       (ref as any).current = {
@@ -120,7 +130,34 @@ function isInsideBoard(x: number, y: number): boolean {
       };
     }
   }, [pieces, currentTurn]);
+      useEffect(() => {
+        if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
+          return;
+        }
 
+
+        if (isInCheck) {
+          if (referee.isCheckmate(isInCheck, pieces)) {
+            setIsCheckmate(isInCheck);
+            setGameState(GameState.CHECKMATE);
+            if (props.onGameStateChange) {
+              props.onGameStateChange(GameState.CHECKMATE, isInCheck);
+            }
+          } else {
+            setGameState(GameState.CHECK);
+            if (props.onGameStateChange) {
+              props.onGameStateChange(GameState.CHECK, isInCheck);
+            }
+          }
+        } else {
+          if (referee.isStalemate(currentTurn, pieces)) {
+            setGameState(GameState.STALEMATE);
+            if (props.onGameStateChange) {
+              props.onGameStateChange(GameState.STALEMATE, null);
+            }
+          }
+        }
+      }, [pieces, isInCheck, currentTurn, referee, gameState, props.onGameStateChange]);
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (activePiece) {
@@ -156,18 +193,18 @@ function isInsideBoard(x: number, y: number): boolean {
 
   const generateBoard = React.useCallback(() => {
     const boardSquares: JSX.Element[] = [];
-    
+
     for (let j = verticalAxis.length - 1; j >= 0; j--) {
       for (let i = 0; i < horizontalAxis.length; i++) {
         const number = j + i + 2;
         const position = {x: i, y: j};
         const piece = pieces.find(p => p.x === i && p.y === j);
-        
+
         boardSquares.push(
-          <Tile 
-            key={`${i},${j}`} 
-            image={piece?.image} 
-            number={number} 
+          <Tile
+            key={`${i},${j}`}
+            image={piece?.image}
+            number={number}
           />
         );
       }
@@ -179,39 +216,39 @@ function isInsideBoard(x: number, y: number): boolean {
     if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
       return;
     }
-  
+
     const element = e.target as HTMLElement;
     const chessboard = chessboardRef.current;
     if (element.classList.contains("chess-piece") && chessboard) {
       // Get board dimensions
       const boardRect = chessboard.getBoundingClientRect();
       const tileSize = boardRect.width / 8;
-  
+
       // Calculate grid coordinates based on board's position
       setGridX(Math.floor((e.clientX - boardRect.left) / tileSize));
       setGridY(7 - Math.floor((e.clientY - boardRect.top) / tileSize));
-      
+
       // Position the piece centered under cursor
       let x = e.clientX - (tileSize / 2);
       let y = e.clientY - (tileSize / 2);
-  
+
       // Calculate boundaries relative to the board
       const boardLeft = boardRect.left;
       const boardTop = boardRect.top;
       const boardRight = boardRect.right - tileSize;
       const boardBottom = boardRect.bottom - tileSize;
-  
+
       // Keep piece within board boundaries
       x = Math.max(boardLeft, Math.min(x, boardRight));
       y = Math.max(boardTop, Math.min(y, boardBottom));
-   
+
       // Position element absolutely
       element.style.position = "absolute";
       element.style.left = `${x}px`;
       element.style.top = `${y}px`;
       element.style.width = `${tileSize}px`;
       element.style.height = `${tileSize}px`;
-  
+
       setActivePiece(element);
     }
   }
@@ -220,23 +257,23 @@ function isInsideBoard(x: number, y: number): boolean {
     if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
       return;
     }
-  
+
     const chessboard = chessboardRef.current;
     if (activePiece && chessboard) {
       // Get board dimensions
       const boardRect = chessboard.getBoundingClientRect();
       const tileSize = boardRect.width / 8;
-      
+
       // Calculate boundaries relative to the board
       const minX = boardRect.left;
       const minY = boardRect.top;
       const maxX = boardRect.right - tileSize;
       const maxY = boardRect.bottom - tileSize;
-  
+
       // Keep piece centered under cursor and within boundaries
       const x = Math.min(Math.max(e.clientX - (tileSize / 2), minX), maxX);
       const y = Math.min(Math.max(e.clientY - (tileSize / 2), minY), maxY);
-  
+
       // Position element absolutely
       activePiece.style.position = "absolute";
       activePiece.style.left = `${x}px`;
@@ -415,20 +452,20 @@ function isInsideBoard(x: number, y: number): boolean {
 
 const handlePromote = (pieceType: PieceType) => {
   if (!promotionPawn || !promotionPosition) return;
-  
+
   const team = promotionPawn.team;
-  const imageKey = team === TeamType.OUR ? 
-    getPieceSymbol(pieceType).toUpperCase() : 
+  const imageKey = team === TeamType.OUR ?
+    getPieceSymbol(pieceType).toUpperCase() :
     getPieceSymbol(pieceType).toLowerCase();
-  
+
   const image = pieceImages[imageKey as keyof typeof pieceImages] || '';
-  
-  const updatedPieces = pieces.map(p => 
-    p === promotionPawn ? 
-      { ...p, type: pieceType, image, x: promotionPosition.x, y: promotionPosition.y } : 
+
+  const updatedPieces = pieces.map(p =>
+    p === promotionPawn ?
+      { ...p, type: pieceType, image, x: promotionPosition.x, y: promotionPosition.y } :
       p
   );
-  
+
   setPieces(updatedPieces);
   setIsPromoting(false);
   setPromotionPawn(null);
@@ -494,28 +531,29 @@ const handlePromote = (pieceType: PieceType) => {
 
   function executeMove(notation: string): boolean {
     // Handle castling notation
+    console.log(`Executing move: ${notation}`);
     if (notation === 'O-O' || notation === 'O-O-O') {
       return executeCastling(notation);
     }
-      
+
     // Handle standard notation
     const regex = /^([a-h][1-8])([a-h][1-8])(=[QRBN])?$/;
     const match = notation.match(regex);
-      
+
     if (!match) return false;
-      
+
     const [, from, to, promotion] = match;
     const fromX = horizontalAxis.indexOf(from[0]);
     const fromY = verticalAxis.indexOf(from[1]);
     const toX = horizontalAxis.indexOf(to[0]);
     const toY = verticalAxis.indexOf(to[1]);
-      
+
     const piece = pieces.find(p => p.x === fromX && p.y === fromY);
-      
+
     if (!piece) return false;
-      
+
     const validMove = referee.isValidMove(fromX, fromY, toX, toY, piece.type, piece.team, pieces, enPassantTarget);
-      
+
     if (validMove) {
       const updatedPieces = pieces.map(p => {
         if (p === piece) {
@@ -526,7 +564,7 @@ const handlePromote = (pieceType: PieceType) => {
         }
         return p;
       }).filter((p): p is Piece => p !== null);
-      
+
       if (promotion) {
         const promotionType = getPromotionTypeFromSymbol(promotion[1]);
         if (promotionType !== undefined) {
@@ -539,15 +577,15 @@ const handlePromote = (pieceType: PieceType) => {
           }
         }
       }
-      
+
       setPieces(updatedPieces);
       setCurrentTurn(currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR);
       return true;
     }
-      
+
     return false;
   }
-  
+
   function executeCastling(notation: string): boolean {
     const team = currentTurn;
     const rank = team === TeamType.OUR ? 0 : 7;
@@ -557,9 +595,9 @@ const handlePromote = (pieceType: PieceType) => {
       p.type === PieceType.KING &&
       p.team === team
     );
-      
+
     if (!king) return false;
-      
+
     const isKingSide = notation === 'O-O';
     const rookX = isKingSide ? 7 : 0;
     const rook = pieces.find(
@@ -568,17 +606,17 @@ const handlePromote = (pieceType: PieceType) => {
       p.type === PieceType.ROOK &&
       p.team === team
     );
-      
+
     if (!rook) return false;
-      
+
     const newKingX = isKingSide ? 6 : 2;
     const newRookX = isKingSide ? 5 : 3;
     const castlingPath = isKingSide ? [5, 6] : [1, 2, 3];
-      
+
     const isPathClear = castlingPath.every(
       pathX => !pieces.find(p => p.x === pathX && p.y === rank)
     );
-      
+
     if (isPathClear) {
       const updatedPieces = pieces.map(p => {
         if (p === king) {
@@ -589,9 +627,9 @@ const handlePromote = (pieceType: PieceType) => {
         }
         return p;
       });
-      
+
       setPieces(updatedPieces);
-      
+
       // Update castling rights
       if (team === TeamType.OUR) {
         setCastlingRights({
@@ -606,12 +644,12 @@ const handlePromote = (pieceType: PieceType) => {
           blackQueenSide: false,
         });
       }
-      
+
       setCurrentTurn(currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR);
       console.log(notation); // Log the castling move
       return true;
     }
-      
+
     return false;
   }
 
@@ -650,31 +688,31 @@ const handlePromote = (pieceType: PieceType) => {
           <div className="bg-white p-4 rounded-md shadow-lg">
             <div className="flex flex-col gap-2">
               <button onClick={() => handlePromote(PieceType.QUEEN)} className="hover:bg-gray-100">
-                <img 
-                  src={getPromotionImage(PieceType.QUEEN)} 
-                  alt="Queen" 
-                  className="w-[calc(100%/4)] aspect-square" 
+                <img
+                  src={getPromotionImage(PieceType.QUEEN)}
+                  alt="Queen"
+                  className="w-[calc(100%/4)] aspect-square"
                 />
               </button>
               <button onClick={() => handlePromote(PieceType.ROOK)} className="hover:bg-gray-100">
-                <img 
-                  src={getPromotionImage(PieceType.ROOK)} 
-                  alt="Rook" 
-                  className="w-[calc(100%/4)] aspect-square" 
+                <img
+                  src={getPromotionImage(PieceType.ROOK)}
+                  alt="Rook"
+                  className="w-[calc(100%/4)] aspect-square"
                 />
               </button>
               <button onClick={() => handlePromote(PieceType.BISHOP)} className="hover:bg-gray-100">
-                <img 
-                  src={getPromotionImage(PieceType.BISHOP)} 
-                  alt="Bishop" 
-                  className="w-[calc(100%/4)] aspect-square" 
+                <img
+                  src={getPromotionImage(PieceType.BISHOP)}
+                  alt="Bishop"
+                  className="w-[calc(100%/4)] aspect-square"
                 />
               </button>
               <button onClick={() => handlePromote(PieceType.KNIGHT)} className="hover:bg-gray-100">
-                <img 
-                  src={getPromotionImage(PieceType.KNIGHT)} 
-                  alt="Knight" 
-                  className="w-[calc(100%/4)] aspect-square" 
+                <img
+                  src={getPromotionImage(PieceType.KNIGHT)}
+                  alt="Knight"
+                  className="w-[calc(100%/4)] aspect-square"
                 />
               </button>
             </div>
