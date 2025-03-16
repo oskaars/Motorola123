@@ -36,6 +36,7 @@ const pieceImages = {
   K: "/pawns/WhiteKing.svg",
 };
 interface ChessboardProps {
+  onMove(notation: string): unknown;
   onGameStateChange?: (state: GameState, team: TeamType | null) => void;
 }
 function loadPositionFromFEN(fen: string): Piece[] {
@@ -215,39 +216,37 @@ function isInsideBoard(x: number, y: number): boolean {
     if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
       return;
     }
-
+  
     const element = e.target as HTMLElement;
     const chessboard = chessboardRef.current;
     if (element.classList.contains("chess-piece") && chessboard) {
       // Get board dimensions
       const boardRect = chessboard.getBoundingClientRect();
       const tileSize = boardRect.width / 8;
-
+  
       // Calculate grid coordinates based on board's position
       setGridX(Math.floor((e.clientX - boardRect.left) / tileSize));
       setGridY(7 - Math.floor((e.clientY - boardRect.top) / tileSize));
-
-      // Position the piece centered under cursor
-      let x = e.clientX - (tileSize / 2);
-      let y = e.clientY - (tileSize / 2);
-
-      // Calculate boundaries relative to the board
-      const boardLeft = boardRect.left;
-      const boardTop = boardRect.top;
-      const boardRight = boardRect.right - tileSize;
-      const boardBottom = boardRect.bottom - tileSize;
-
-      // Keep piece within board boundaries
-      x = Math.max(boardLeft, Math.min(x, boardRight));
-      y = Math.max(boardTop, Math.min(y, boardBottom));
-
-      // Position element absolutely
-      element.style.position = "absolute";
-      element.style.left = `${x}px`;
-      element.style.top = `${y}px`;
+  
+      // Get the piece's current position and dimensions
+      const pieceRect = element.getBoundingClientRect();
+      
+      // Calculate the cursor position within the piece
+      const offsetX = e.clientX - pieceRect.left;
+      const offsetY = e.clientY - pieceRect.top;
+      
+      // Store these offsets for use during movement
+      element.dataset.offsetX = offsetX.toString();
+      element.dataset.offsetY = offsetY.toString();
+      
+      // Position the piece under the cursor - these initial calculations are critical
+      element.style.position = "fixed";
+      element.style.left = `${e.clientX - offsetX}px`;
+      element.style.top = `${e.clientY - offsetY}px`;
       element.style.width = `${tileSize}px`;
       element.style.height = `${tileSize}px`;
-
+      element.style.zIndex = "1000"; // Ensure it appears above other elements
+      
       setActivePiece(element);
     }
   }
@@ -256,27 +255,15 @@ function isInsideBoard(x: number, y: number): boolean {
     if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
       return;
     }
-
-    const chessboard = chessboardRef.current;
-    if (activePiece && chessboard) {
-      // Get board dimensions
-      const boardRect = chessboard.getBoundingClientRect();
-      const tileSize = boardRect.width / 8;
-
-      // Calculate boundaries relative to the board
-      const minX = boardRect.left;
-      const minY = boardRect.top;
-      const maxX = boardRect.right - tileSize;
-      const maxY = boardRect.bottom - tileSize;
-
-      // Keep piece centered under cursor and within boundaries
-      const x = Math.min(Math.max(e.clientX - (tileSize / 2), minX), maxX);
-      const y = Math.min(Math.max(e.clientY - (tileSize / 2), minY), maxY);
-
-      // Position element absolutely
-      activePiece.style.position = "absolute";
-      activePiece.style.left = `${x}px`;
-      activePiece.style.top = `${y}px`;
+  
+    if (activePiece) {
+      // Get the stored offsets
+      const offsetX = parseFloat(activePiece.dataset.offsetX || "0");
+      const offsetY = parseFloat(activePiece.dataset.offsetY || "0");
+      
+      // Position element at cursor location, accounting for the initial grab offset
+      activePiece.style.left = `${e.clientX - offsetX}px`;
+      activePiece.style.top = `${e.clientY - offsetY}px`;
     }
   }
 
@@ -284,6 +271,7 @@ function isInsideBoard(x: number, y: number): boolean {
     if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
         return;
     }
+    
     const chessboard = chessboardRef.current;
     if (activePiece && chessboard) {
         const boardRect = chessboard.getBoundingClientRect();
@@ -297,6 +285,9 @@ function isInsideBoard(x: number, y: number): boolean {
             activePiece.style.removeProperty("left");
             activePiece.style.removeProperty("width");
             activePiece.style.removeProperty("height");
+            activePiece.style.removeProperty("zIndex");
+            delete activePiece.dataset.offsetX;
+            delete activePiece.dataset.offsetY;
             setActivePiece(null);
             return;
         }
@@ -309,74 +300,79 @@ function isInsideBoard(x: number, y: number): boolean {
             const validMove = referee.isValidMove(gridX, gridY, x, y, currentPiece.type, currentPiece.team, pieces, enPassantTarget);
 
             if (validMove) {
-                const updatedPieces = pieces
-                    .map((piece) => {
-                        if (piece.x === currentPiece.x && piece.y === currentPiece.y) {
-                            return { ...piece, x, y };
-                        }
+              const fromNotation = `${horizontalAxis[gridX]}${verticalAxis[gridY]}`;
+              const toNotation = `${horizontalAxis[x]}${verticalAxis[y]}`;
+              const notation = `${fromNotation}${toNotation}`;
 
-                        if (
-                            currentPiece.type === PieceType.PAWN &&
-                            enPassantTarget &&
-                            x === enPassantTarget.x &&
-                            y === enPassantTarget.y
-                        ) {
-                            const capturedPawnY = currentPiece.team === TeamType.OUR ? y - 1 : y + 1;
-                            if (piece.x === x && piece.y === capturedPawnY) {
-                                return null;
-                            }
-                        }
+              // Send the move to the server
+              if (props.onMove) {
+                props.onMove(notation);
+              }
 
-                        if (piece.x === x && piece.y === y) {
-                            return null;
-                        }
+              // Update the local board
+              const updatedPieces = pieces
+                .map((piece) => {
+                  if (piece.x === currentPiece.x && piece.y === currentPiece.y) {
+                    return { ...piece, x, y };
+                  }
 
-                        return piece;
-                    })
-                    .filter((piece): piece is Piece => piece !== null);
+                  if (
+                    currentPiece.type === PieceType.PAWN &&
+                    enPassantTarget &&
+                    x === enPassantTarget.x &&
+                    y === enPassantTarget.y
+                  ) {
+                    const capturedPawnY = currentPiece.team === TeamType.OUR ? y - 1 : y + 1;
+                    if (piece.x === x && piece.y === capturedPawnY) {
+                      return null;
+                    }
+                  }
+
+                  if (piece.x === x && piece.y === y) {
+                    return null;
+                  }
+
+                  return piece;
+                })
+                .filter((piece): piece is Piece => piece !== null);
 
                 const nextTurn =
-                    currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR;
-                const ourKingInCheck = referee.isKingInCheck(
-                    currentTurn,
-                    updatedPieces
-                );
-                const opponentKingInCheck = referee.isKingInCheck(
-                    nextTurn,
-                    updatedPieces
-                );
+                currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR;
+                  const ourKingInCheck = referee.isKingInCheck(currentTurn, updatedPieces);
+                  const opponentKingInCheck = referee.isKingInCheck(nextTurn, updatedPieces);
 
-                if (ourKingInCheck) {
+                  if (ourKingInCheck) {
                     setIsInCheck(currentTurn);
                     setGameState(GameState.CHECK);
                     if (referee.isCheckmate(currentTurn, updatedPieces)) {
-                        setIsCheckmate(currentTurn);
-                        setGameState(GameState.CHECKMATE);
+                      setIsCheckmate(currentTurn);
+                      setGameState(GameState.CHECKMATE);
                     }
-                } else if (opponentKingInCheck) {
+                  } else if (opponentKingInCheck) {
                     setIsInCheck(nextTurn);
                     setGameState(GameState.CHECK);
                     if (referee.isCheckmate(nextTurn, updatedPieces)) {
-                        setIsCheckmate(nextTurn);
-                        setGameState(GameState.CHECKMATE);
+                      setIsCheckmate(nextTurn);
+                      setGameState(GameState.CHECKMATE);
                     }
-                } else {
+                  } else {
                     setIsInCheck(null);
                     setGameState(GameState.ACTIVE);
                     if (referee.isStalemate(nextTurn, updatedPieces)) {
-                        setGameState(GameState.STALEMATE);
+                      setGameState(GameState.STALEMATE);
                     }
+                  }
+    
+                  setPieces(updatedPieces);
+                  setCurrentTurn(nextTurn);
+                } else {
+                  activePiece.style.position = "relative";
+                  activePiece.style.removeProperty("top");
+                  activePiece.style.removeProperty("left");
                 }
-                setPieces(updatedPieces);
-                setCurrentTurn(nextTurn);
-            } else {
-                activePiece.style.position = "relative";
-                activePiece.style.removeProperty("top");
-                activePiece.style.removeProperty("left");
+              }
+              setActivePiece(null);
             }
-        }
-        setActivePiece(null);
-    }
 }
 
   function generateFEN(pieces: Piece[]): string {

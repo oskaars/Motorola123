@@ -182,9 +182,24 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
           </div>
         </div>
       ) : (
-        <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4">
-          <div className="bg-white rounded-xl shadow-xl p-4">
-            <Chessboard ref={chessboardRef} onGameStateChange={handleGameStateChange} />
+        <div className="p-4 bg-white rounded-xl shadow-xl grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <h2 className="text-xl font-bold mb-2 text-black">Chess Game</h2>
+            <div className="mb-4">
+              <Chessboard
+                ref={chessboardRef}
+                onGameStateChange={handleGameStateChange}
+                onMove={(notation) => {
+                  if (roomId) {
+                    client.sendMove(roomId, notation);
+                    setMessages(prev => [...prev, {
+                      sender: username,
+                      text: `Made move: ${notation}`
+                    }]);
+                  }
+                }}
+              />
+            </div>
           </div>
           
           <div className="bg-white rounded-xl shadow-xl p-4 flex flex-col">
