@@ -37,6 +37,7 @@ const pieceImages = {
 };
 interface ChessboardProps {
   onGameStateChange?: (state: GameState, team: TeamType | null) => void;
+
 }
 function loadPositionFromFEN(fen: string): Piece[] {
   const pieces: Piece[] = [];
@@ -281,18 +282,19 @@ function isInsideBoard(x: number, y: number): boolean {
     }
   }
 
-  function droppedPiece(e: React.MouseEvent) {
-    if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
-        return;
-    }
-    const chessboard = chessboardRef.current;
-    if (activePiece && chessboard) {
-        const boardRect = chessboard.getBoundingClientRect();
-        const tileSize = boardRect.width / 8;
-        const x = Math.floor((e.clientX - boardRect.left) / tileSize);
-        const y = 7 - Math.floor((e.clientY - boardRect.top) / tileSize);
+      function droppedPiece(e: React.MouseEvent) {
+        if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
+          return;
+        }
 
-        if (!isInsideBoard(x, y)) {
+        const chessboard = chessboardRef.current;
+        if (activePiece && chessboard) {
+          const boardRect = chessboard.getBoundingClientRect();
+          const tileSize = boardRect.width / 8;
+          const x = Math.floor((e.clientX - boardRect.left) / tileSize);
+          const y = 7 - Math.floor((e.clientY - boardRect.top) / tileSize);
+
+          if (!isInsideBoard(x, y)) {
             activePiece.style.position = "relative";
             activePiece.style.removeProperty("top");
             activePiece.style.removeProperty("left");
@@ -300,85 +302,100 @@ function isInsideBoard(x: number, y: number): boolean {
             activePiece.style.removeProperty("height");
             setActivePiece(null);
             return;
-        }
+          }
 
-        const currentPiece = pieces.find(
+          const currentPiece = pieces.find(
             (piece) => piece.x === gridX && piece.y === gridY
-        );
+          );
 
-        if (currentPiece) {
-            const validMove = referee.isValidMove(gridX, gridY, x, y, currentPiece.type, currentPiece.team, pieces, enPassantTarget);
+          if (currentPiece) {
+            const validMove = referee.isValidMove(
+              gridX,
+              gridY,
+              x,
+              y,
+              currentPiece.type,
+              currentPiece.team,
+              pieces,
+              enPassantTarget
+            );
 
             if (validMove) {
-                const updatedPieces = pieces
-                    .map((piece) => {
-                        if (piece.x === currentPiece.x && piece.y === currentPiece.y) {
-                            return { ...piece, x, y };
-                        }
+              // Convert the move to algebraic notation
+              const fromNotation = `${horizontalAxis[gridX]}${verticalAxis[gridY]}`;
+              const toNotation = `${horizontalAxis[x]}${verticalAxis[y]}`;
+              const notation = `${fromNotation}${toNotation}`;
 
-                        if (
-                            currentPiece.type === PieceType.PAWN &&
-                            enPassantTarget &&
-                            x === enPassantTarget.x &&
-                            y === enPassantTarget.y
-                        ) {
-                            const capturedPawnY = currentPiece.team === TeamType.OUR ? y - 1 : y + 1;
-                            if (piece.x === x && piece.y === capturedPawnY) {
-                                return null;
-                            }
-                        }
+              // Send the move to the server
+              if (props.onMove) {
+                props.onMove(notation);
+              }
 
-                        if (piece.x === x && piece.y === y) {
-                            return null;
-                        }
+              // Update the local board
+              const updatedPieces = pieces
+                .map((piece) => {
+                  if (piece.x === currentPiece.x && piece.y === currentPiece.y) {
+                    return { ...piece, x, y };
+                  }
 
-                        return piece;
-                    })
-                    .filter((piece): piece is Piece => piece !== null);
-
-                const nextTurn =
-                    currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR;
-                const ourKingInCheck = referee.isKingInCheck(
-                    currentTurn,
-                    updatedPieces
-                );
-                const opponentKingInCheck = referee.isKingInCheck(
-                    nextTurn,
-                    updatedPieces
-                );
-
-                if (ourKingInCheck) {
-                    setIsInCheck(currentTurn);
-                    setGameState(GameState.CHECK);
-                    if (referee.isCheckmate(currentTurn, updatedPieces)) {
-                        setIsCheckmate(currentTurn);
-                        setGameState(GameState.CHECKMATE);
+                  if (
+                    currentPiece.type === PieceType.PAWN &&
+                    enPassantTarget &&
+                    x === enPassantTarget.x &&
+                    y === enPassantTarget.y
+                  ) {
+                    const capturedPawnY = currentPiece.team === TeamType.OUR ? y - 1 : y + 1;
+                    if (piece.x === x && piece.y === capturedPawnY) {
+                      return null;
                     }
-                } else if (opponentKingInCheck) {
-                    setIsInCheck(nextTurn);
-                    setGameState(GameState.CHECK);
-                    if (referee.isCheckmate(nextTurn, updatedPieces)) {
-                        setIsCheckmate(nextTurn);
-                        setGameState(GameState.CHECKMATE);
-                    }
-                } else {
-                    setIsInCheck(null);
-                    setGameState(GameState.ACTIVE);
-                    if (referee.isStalemate(nextTurn, updatedPieces)) {
-                        setGameState(GameState.STALEMATE);
-                    }
+                  }
+
+                  if (piece.x === x && piece.y === y) {
+                    return null;
+                  }
+
+                  return piece;
+                })
+                .filter((piece): piece is Piece => piece !== null);
+
+              const nextTurn =
+                currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR;
+              const ourKingInCheck = referee.isKingInCheck(currentTurn, updatedPieces);
+              const opponentKingInCheck = referee.isKingInCheck(nextTurn, updatedPieces);
+
+              if (ourKingInCheck) {
+                setIsInCheck(currentTurn);
+                setGameState(GameState.CHECK);
+                if (referee.isCheckmate(currentTurn, updatedPieces)) {
+                  setIsCheckmate(currentTurn);
+                  setGameState(GameState.CHECKMATE);
                 }
-                setPieces(updatedPieces);
-                setCurrentTurn(nextTurn);
+              } else if (opponentKingInCheck) {
+                setIsInCheck(nextTurn);
+                setGameState(GameState.CHECK);
+                if (referee.isCheckmate(nextTurn, updatedPieces)) {
+                  setIsCheckmate(nextTurn);
+                  setGameState(GameState.CHECKMATE);
+                }
+              } else {
+                setIsInCheck(null);
+                setGameState(GameState.ACTIVE);
+                if (referee.isStalemate(nextTurn, updatedPieces)) {
+                  setGameState(GameState.STALEMATE);
+                }
+              }
+
+              setPieces(updatedPieces);
+              setCurrentTurn(nextTurn);
             } else {
-                activePiece.style.position = "relative";
-                activePiece.style.removeProperty("top");
-                activePiece.style.removeProperty("left");
+              activePiece.style.position = "relative";
+              activePiece.style.removeProperty("top");
+              activePiece.style.removeProperty("left");
             }
+          }
+          setActivePiece(null);
         }
-        setActivePiece(null);
-    }
-}
+      }
 
   function generateFEN(pieces: Piece[]): string {
     let fen = "";
