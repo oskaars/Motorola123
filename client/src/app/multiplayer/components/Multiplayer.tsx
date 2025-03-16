@@ -146,7 +146,7 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
       {!joined ? (
         <div className="p-6 max-w-md mx-auto bg-white rounded-xl shadow-md space-y-4 text-black">
           <h2 className="text-xl font-bold mb-4">Join a Chess Room</h2>
@@ -182,22 +182,18 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
           </div>
         </div>
       ) : (
-        <div className="p-4 bg-white rounded-xl shadow-xl grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <h2 className="text-xl font-bold mb-2 text-black">Chess Game</h2>
-            <div className="mb-4">
-              <Chessboard ref={chessboardRef} onGameStateChange={handleGameStateChange} />
-            </div>
+        <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4">
+          <div className="bg-white rounded-xl shadow-xl p-4">
+            <Chessboard ref={chessboardRef} onGameStateChange={handleGameStateChange} />
           </div>
-
-          <div className="bg-gray-50 rounded p-4 flex flex-col h-full">
-            <h3 className="text-lg font-semibold mb-2 text-black">Game Room: {roomId}</h3>
-
-            <div className="flex-grow overflow-hidden flex flex-col">
+          
+          <div className="bg-white rounded-xl shadow-xl p-4 flex flex-col">
+            <h3 className="text-lg font-semibold mb-4 text-black">Game Room: {roomId}</h3>
+            
+            <div className="flex-1 overflow-hidden flex flex-col">
               <div
                 ref={chatContainerRef}
-                className="flex-grow overflow-y-auto mb-4 p-2 bg-white border rounded"
-                style={{ maxHeight: "500px" }}
+                className="flex-1 overflow-y-auto mb-4 p-2 bg-gray-50 rounded-lg border"
               >
                 {messages.map((msg, idx) => (
                   <div key={idx} className={`mb-2 ${msg.sender === username ? "text-blue-600" : "text-black"}`}>
@@ -207,46 +203,43 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
                 ))}
               </div>
 
-              <div className="space-y-2">
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={moveInput}
-                    onChange={(e) => setMoveInput(e.target.value)}
-                    placeholder="Enter move (e.g., e2e4)"
-                    className="p-2 border rounded flex-grow black enabled:text-black"
-                  />
-                  <button
-                    onClick={handleSendMove}
-                    className="bg-green-500 text-white px-4 py-2 rounded whitespace-nowrap"
-                  >
-                    Send Move
-                  </button>
-                </div>
+              <div className="space-y-4">
+              <div className="flex gap-2">
+                <input
+                  value={moveInput}
+                  onChange={(e) => setMoveInput(e.target.value)}
+                  placeholder="Enter move (e.g., e2e4)"
+                  className="flex-1 p-2 border rounded enabled:text-black"
+                />
+                <button
+                  onClick={handleSendMove}
+                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                >
+                  Send Move
+                </button>
+              </div>
 
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSendChat()}
-                    placeholder="Type a message..."
-                    className="p-2 border rounded flex-grow enabled:text-black"
-                  />
-                  <button
-                    onClick={handleSendChat}
-                    className="bg-blue-500 text-white px-4 py-2 rounded"
-                  >
-                    Send
-                  </button>
-                </div>
+              <div className="flex gap-2">
+                <input
+                  value={currentMessage}
+                  onChange={(e) => setCurrentMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  className="flex-1 p-2 border rounded enabled:text-black"
+                />
+                <button
+                  onClick={handleSendChat}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                  Send
+                </button>
               </div>
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 };
 
 export default Multiplayer;

@@ -193,16 +193,15 @@ function isInsideBoard(x: number, y: number): boolean {
 
   const generateBoard = React.useCallback(() => {
     const boardSquares: JSX.Element[] = [];
-
-    for (let j = verticalAxis.length - 1; j >= 0; j--) {
-      for (let i = 0; i < horizontalAxis.length; i++) {
-        const number = j + i + 2;
-        const position = {x: i, y: j};
-        const piece = pieces.find(p => p.x === i && p.y === j);
-
+    
+    for (let rank = 0; rank < 8; rank++) {
+      for (let file = 0; file < 8; file++) {
+        const number = file + rank + 2;
+        const piece = pieces.find(p => p.x === file && p.y === 7 - rank); 
+        
         boardSquares.push(
           <Tile
-            key={`${i},${j}`}
+            key={`${file},${rank}`}
             image={piece?.image}
             number={number}
           />
@@ -676,22 +675,22 @@ const handlePromote = (pieceType: PieceType) => {
 
   return (
     <div
-        onMouseMove={(e: React.MouseEvent) => movePiece(e)}
-        onMouseDown={(e: React.MouseEvent) => grabPiece(e)}
-        onMouseUp={(e: React.MouseEvent) => droppedPiece(e)}
-        className="bg-[#ff0000] w-full aspect-square grid grid-cols-8 text-black"
-        ref={chessboardRef}
-      >
+      onMouseMove={(e: React.MouseEvent) => movePiece(e)}
+      onMouseDown={(e: React.MouseEvent) => grabPiece(e)}
+      onMouseUp={(e: React.MouseEvent) => droppedPiece(e)}
+      className="relative bg-[#ff0000] w-full max-w-[90vmin] mx-auto aspect-square grid grid-cols-8 text-black"
+      ref={chessboardRef}
+    >
       {generateBoard()}
       {isPromoting && promotionPawn && (
         <div className="absolute inset-0 flex items-center justify-center z-[1000] bg-black/50">
-          <div className="bg-white p-4 rounded-md shadow-lg">
-            <div className="flex flex-col gap-2">
-              <button onClick={() => handlePromote(PieceType.QUEEN)} className="hover:bg-gray-100">
+          <div className="bg-white p-4 rounded-md shadow-lg w-full max-w-[300px]">
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => handlePromote(PieceType.QUEEN)} className="hover:bg-gray-100 p-2">
                 <img
                   src={getPromotionImage(PieceType.QUEEN)}
                   alt="Queen"
-                  className="w-[calc(100%/4)] aspect-square"
+                  className="w-full aspect-square"
                 />
               </button>
               <button onClick={() => handlePromote(PieceType.ROOK)} className="hover:bg-gray-100">
