@@ -136,13 +136,15 @@ function isInsideBoard(x: number, y: number): boolean {
           return;
         }
 
-
         if (isInCheck) {
           if (referee.isCheckmate(isInCheck, pieces)) {
             setIsCheckmate(isInCheck);
             setGameState(GameState.CHECKMATE);
+
+            // Notify the server about the checkmate and the winner
             if (props.onGameStateChange) {
-              props.onGameStateChange(GameState.CHECKMATE, isInCheck);
+              const winner = isInCheck === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR;
+              props.onGameStateChange(GameState.CHECKMATE, winner);
             }
           } else {
             setGameState(GameState.CHECK);

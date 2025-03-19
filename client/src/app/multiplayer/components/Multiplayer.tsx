@@ -135,7 +135,7 @@ const Multiplayer: React.FC<{ onJoinStatusChange?: (status: boolean) => void }> 
     } else if (state === GameState.CHECKMATE) {
       const teamName = team === TeamType.OUR ? "White" : "Black";
       const winner = team === TeamType.OUR ? "Black" : "White";
-      const message = `Checkmate! ${teamName} is in checkmate. ${winner} wins!`;
+      const message = `CHECKMATE! ${teamName} is in checkmate. ${winner} wins!`;
       client.sendMessage(roomId!, message, "System");
       setMessages(prev => [...prev, { sender: "System", text: message }]);
     } else if (state === GameState.STALEMATE) {
