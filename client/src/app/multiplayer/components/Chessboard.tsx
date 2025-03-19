@@ -36,8 +36,8 @@ const pieceImages = {
   K: "/pawns/WhiteKing.svg",
 };
 interface ChessboardProps {
+  onMove(notation: string): unknown;
   onGameStateChange?: (state: GameState, team: TeamType | null) => void;
-
 }
 function loadPositionFromFEN(fen: string): Piece[] {
   const pieces: Piece[] = [];
@@ -196,16 +196,15 @@ function isInsideBoard(x: number, y: number): boolean {
 
   const generateBoard = React.useCallback(() => {
     const boardSquares: JSX.Element[] = [];
-
-    for (let j = verticalAxis.length - 1; j >= 0; j--) {
-      for (let i = 0; i < horizontalAxis.length; i++) {
-        const number = j + i + 2;
-        const position = {x: i, y: j};
-        const piece = pieces.find(p => p.x === i && p.y === j);
-
+    
+    for (let rank = 0; rank < 8; rank++) {
+      for (let file = 0; file < 8; file++) {
+        const number = file + rank + 2;
+        const piece = pieces.find(p => p.x === file && p.y === 7 - rank); 
+        
         boardSquares.push(
           <Tile
-            key={`${i},${j}`}
+            key={`${file},${rank}`}
             image={piece?.image}
             number={number}
           />
@@ -219,39 +218,37 @@ function isInsideBoard(x: number, y: number): boolean {
     if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
       return;
     }
-
+  
     const element = e.target as HTMLElement;
     const chessboard = chessboardRef.current;
     if (element.classList.contains("chess-piece") && chessboard) {
       // Get board dimensions
       const boardRect = chessboard.getBoundingClientRect();
       const tileSize = boardRect.width / 8;
-
+  
       // Calculate grid coordinates based on board's position
       setGridX(Math.floor((e.clientX - boardRect.left) / tileSize));
       setGridY(7 - Math.floor((e.clientY - boardRect.top) / tileSize));
-
-      // Position the piece centered under cursor
-      let x = e.clientX - (tileSize / 2);
-      let y = e.clientY - (tileSize / 2);
-
-      // Calculate boundaries relative to the board
-      const boardLeft = boardRect.left;
-      const boardTop = boardRect.top;
-      const boardRight = boardRect.right - tileSize;
-      const boardBottom = boardRect.bottom - tileSize;
-
-      // Keep piece within board boundaries
-      x = Math.max(boardLeft, Math.min(x, boardRight));
-      y = Math.max(boardTop, Math.min(y, boardBottom));
-
-      // Position element absolutely
-      element.style.position = "absolute";
-      element.style.left = `${x}px`;
-      element.style.top = `${y}px`;
+  
+      // Get the piece's current position and dimensions
+      const pieceRect = element.getBoundingClientRect();
+      
+      // Calculate the cursor position within the piece
+      const offsetX = e.clientX - pieceRect.left;
+      const offsetY = e.clientY - pieceRect.top;
+      
+      // Store these offsets for use during movement
+      element.dataset.offsetX = offsetX.toString();
+      element.dataset.offsetY = offsetY.toString();
+      
+      // Position the piece under the cursor - these initial calculations are critical
+      element.style.position = "fixed";
+      element.style.left = `${e.clientX - offsetX}px`;
+      element.style.top = `${e.clientY - offsetY}px`;
       element.style.width = `${tileSize}px`;
       element.style.height = `${tileSize}px`;
-
+      element.style.zIndex = "1000"; // Ensure it appears above other elements
+      
       setActivePiece(element);
     }
   }
@@ -260,70 +257,51 @@ function isInsideBoard(x: number, y: number): boolean {
     if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
       return;
     }
-
-    const chessboard = chessboardRef.current;
-    if (activePiece && chessboard) {
-      // Get board dimensions
-      const boardRect = chessboard.getBoundingClientRect();
-      const tileSize = boardRect.width / 8;
-
-      // Calculate boundaries relative to the board
-      const minX = boardRect.left;
-      const minY = boardRect.top;
-      const maxX = boardRect.right - tileSize;
-      const maxY = boardRect.bottom - tileSize;
-
-      // Keep piece centered under cursor and within boundaries
-      const x = Math.min(Math.max(e.clientX - (tileSize / 2), minX), maxX);
-      const y = Math.min(Math.max(e.clientY - (tileSize / 2), minY), maxY);
-
-      // Position element absolutely
-      activePiece.style.position = "absolute";
-      activePiece.style.left = `${x}px`;
-      activePiece.style.top = `${y}px`;
+  
+    if (activePiece) {
+      // Get the stored offsets
+      const offsetX = parseFloat(activePiece.dataset.offsetX || "0");
+      const offsetY = parseFloat(activePiece.dataset.offsetY || "0");
+      
+      // Position element at cursor location, accounting for the initial grab offset
+      activePiece.style.left = `${e.clientX - offsetX}px`;
+      activePiece.style.top = `${e.clientY - offsetY}px`;
     }
   }
 
-      function droppedPiece(e: React.MouseEvent) {
-        if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
-          return;
-        }
+  function droppedPiece(e: React.MouseEvent) {
+    if (gameState !== GameState.ACTIVE && gameState !== GameState.CHECK) {
+        return;
+    }
+    
+    const chessboard = chessboardRef.current;
+    if (activePiece && chessboard) {
+        const boardRect = chessboard.getBoundingClientRect();
+        const tileSize = boardRect.width / 8;
+        const x = Math.floor((e.clientX - boardRect.left) / tileSize);
+        const y = 7 - Math.floor((e.clientY - boardRect.top) / tileSize);
 
-        const chessboard = chessboardRef.current;
-        if (activePiece && chessboard) {
-          const boardRect = chessboard.getBoundingClientRect();
-          const tileSize = boardRect.width / 8;
-          const x = Math.floor((e.clientX - boardRect.left) / tileSize);
-          const y = 7 - Math.floor((e.clientY - boardRect.top) / tileSize);
-
-          if (!isInsideBoard(x, y)) {
+        if (!isInsideBoard(x, y)) {
             activePiece.style.position = "relative";
             activePiece.style.removeProperty("top");
             activePiece.style.removeProperty("left");
             activePiece.style.removeProperty("width");
             activePiece.style.removeProperty("height");
+            activePiece.style.removeProperty("zIndex");
+            delete activePiece.dataset.offsetX;
+            delete activePiece.dataset.offsetY;
             setActivePiece(null);
             return;
-          }
+        }
 
-          const currentPiece = pieces.find(
+        const currentPiece = pieces.find(
             (piece) => piece.x === gridX && piece.y === gridY
-          );
+        );
 
-          if (currentPiece) {
-            const validMove = referee.isValidMove(
-              gridX,
-              gridY,
-              x,
-              y,
-              currentPiece.type,
-              currentPiece.team,
-              pieces,
-              enPassantTarget
-            );
+        if (currentPiece) {
+            const validMove = referee.isValidMove(gridX, gridY, x, y, currentPiece.type, currentPiece.team, pieces, enPassantTarget);
 
             if (validMove) {
-              // Convert the move to algebraic notation
               const fromNotation = `${horizontalAxis[gridX]}${verticalAxis[gridY]}`;
               const toNotation = `${horizontalAxis[x]}${verticalAxis[y]}`;
               const notation = `${fromNotation}${toNotation}`;
@@ -360,44 +338,44 @@ function isInsideBoard(x: number, y: number): boolean {
                 })
                 .filter((piece): piece is Piece => piece !== null);
 
-              const nextTurn =
+                const nextTurn =
                 currentTurn === TeamType.OUR ? TeamType.OPPONENTS : TeamType.OUR;
-              const ourKingInCheck = referee.isKingInCheck(currentTurn, updatedPieces);
-              const opponentKingInCheck = referee.isKingInCheck(nextTurn, updatedPieces);
+                  const ourKingInCheck = referee.isKingInCheck(currentTurn, updatedPieces);
+                  const opponentKingInCheck = referee.isKingInCheck(nextTurn, updatedPieces);
 
-              if (ourKingInCheck) {
-                setIsInCheck(currentTurn);
-                setGameState(GameState.CHECK);
-                if (referee.isCheckmate(currentTurn, updatedPieces)) {
-                  setIsCheckmate(currentTurn);
-                  setGameState(GameState.CHECKMATE);
-                }
-              } else if (opponentKingInCheck) {
-                setIsInCheck(nextTurn);
-                setGameState(GameState.CHECK);
-                if (referee.isCheckmate(nextTurn, updatedPieces)) {
-                  setIsCheckmate(nextTurn);
-                  setGameState(GameState.CHECKMATE);
-                }
-              } else {
-                setIsInCheck(null);
-                setGameState(GameState.ACTIVE);
-                if (referee.isStalemate(nextTurn, updatedPieces)) {
-                  setGameState(GameState.STALEMATE);
+                  if (ourKingInCheck) {
+                    setIsInCheck(currentTurn);
+                    setGameState(GameState.CHECK);
+                    if (referee.isCheckmate(currentTurn, updatedPieces)) {
+                      setIsCheckmate(currentTurn);
+                      setGameState(GameState.CHECKMATE);
+                    }
+                  } else if (opponentKingInCheck) {
+                    setIsInCheck(nextTurn);
+                    setGameState(GameState.CHECK);
+                    if (referee.isCheckmate(nextTurn, updatedPieces)) {
+                      setIsCheckmate(nextTurn);
+                      setGameState(GameState.CHECKMATE);
+                    }
+                  } else {
+                    setIsInCheck(null);
+                    setGameState(GameState.ACTIVE);
+                    if (referee.isStalemate(nextTurn, updatedPieces)) {
+                      setGameState(GameState.STALEMATE);
+                    }
+                  }
+    
+                  setPieces(updatedPieces);
+                  setCurrentTurn(nextTurn);
+                } else {
+                  activePiece.style.position = "relative";
+                  activePiece.style.removeProperty("top");
+                  activePiece.style.removeProperty("left");
                 }
               }
-
-              setPieces(updatedPieces);
-              setCurrentTurn(nextTurn);
-            } else {
-              activePiece.style.position = "relative";
-              activePiece.style.removeProperty("top");
-              activePiece.style.removeProperty("left");
+              setActivePiece(null);
             }
-          }
-          setActivePiece(null);
-        }
-      }
+}
 
   function generateFEN(pieces: Piece[]): string {
     let fen = "";
@@ -695,22 +673,22 @@ const handlePromote = (pieceType: PieceType) => {
 
   return (
     <div
-        onMouseMove={(e: React.MouseEvent) => movePiece(e)}
-        onMouseDown={(e: React.MouseEvent) => grabPiece(e)}
-        onMouseUp={(e: React.MouseEvent) => droppedPiece(e)}
-        className="bg-[#ff0000] w-full aspect-square grid grid-cols-8 text-black"
-        ref={chessboardRef}
-      >
+      onMouseMove={(e: React.MouseEvent) => movePiece(e)}
+      onMouseDown={(e: React.MouseEvent) => grabPiece(e)}
+      onMouseUp={(e: React.MouseEvent) => droppedPiece(e)}
+      className="relative bg-[#ff0000] w-full max-w-[90vmin] mx-auto aspect-square grid grid-cols-8 text-black"
+      ref={chessboardRef}
+    >
       {generateBoard()}
       {isPromoting && promotionPawn && (
         <div className="absolute inset-0 flex items-center justify-center z-[1000] bg-black/50">
-          <div className="bg-white p-4 rounded-md shadow-lg">
-            <div className="flex flex-col gap-2">
-              <button onClick={() => handlePromote(PieceType.QUEEN)} className="hover:bg-gray-100">
+          <div className="bg-white p-4 rounded-md shadow-lg w-full max-w-[300px]">
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => handlePromote(PieceType.QUEEN)} className="hover:bg-gray-100 p-2">
                 <img
                   src={getPromotionImage(PieceType.QUEEN)}
                   alt="Queen"
-                  className="w-[calc(100%/4)] aspect-square"
+                  className="w-full aspect-square"
                 />
               </button>
               <button onClick={() => handlePromote(PieceType.ROOK)} className="hover:bg-gray-100">

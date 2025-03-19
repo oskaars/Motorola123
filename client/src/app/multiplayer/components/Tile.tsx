@@ -4,17 +4,14 @@ interface Props {
 }
 
 export default function Tile({ number, image }: Props) {
-    if(number % 2 === 0) {
-        return (
-            <div className="w-[100px] h-[100px] bg-[#a16f5a] grid place-content-center">
-            {image &&<div style={{backgroundImage: `url(${image})`}} className="w-[100px] h-[100px] bg-no-repeat bg-cover cursor-grab active:cursor-grabbing chess-piece"></div>}
-            </div>
-        );
-    } else {
-        return (
-        <div className="w-[100px] h-[100px] bg-[#ecd3b8] grid place-content-center">
-        {image && <div style={{backgroundImage: `url(${image})`}} className="w-[100px] h-[100px] bg-no-repeat bg-cover cursor-grab active:cursor-grabbing chess-piece"></div>}
+    return (
+        <div className={`relative w-full aspect-square ${number % 2 === 0 ? 'bg-[#a16f5a]' : 'bg-[#ecd3b8]'}`}>
+            {image && <img
+                src={image}
+                alt="chess piece"
+                className="absolute inset-0 w-full h-full object-contain cursor-grab active:cursor-grabbing chess-piece"
+                draggable={false} 
+            />}
         </div>
-        );
-    }   
+    );
 }

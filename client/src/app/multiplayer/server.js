@@ -24,7 +24,6 @@ wss.on('connection', (ws) => {
             ws.send(JSON.stringify({ type: 'JOINED_ROOM', roomId: data.roomId }));
             broadcastUserList(data.roomId);
 
-            // Notify all users in the room about the new player
             rooms[data.roomId].forEach(client => {
               client.ws.send(JSON.stringify({
                 type: 'USER_JOINED',
@@ -32,7 +31,6 @@ wss.on('connection', (ws) => {
               }));
             });
 
-            // If the room is full, notify both players
             if (rooms[data.roomId].length === 2) {
               rooms[data.roomId].forEach(client => {
                 client.ws.send(JSON.stringify({

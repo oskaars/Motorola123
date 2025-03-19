@@ -19,3 +19,15 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.chessboard-container {
+  position: relative;
+  width: 100%;
+  max-width: 90vmin;
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+
+.chess-piece {
+  transition: none !important;
+}
