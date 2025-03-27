@@ -1,8 +1,8 @@
 "use client"
 import React from "react";
-import '../../../globals.css';
-import Multiplayer from "../components/Multiplayer";
-import Chessboard from "../components/Chessboard";
+import '/src/globals.css';
+import Multiplayer from "@/app/components/Multiplayer";
+import Chessboard from "@/app/components/Chessboard";
 
 const LandingPage: React.FC = () => {
   return (
