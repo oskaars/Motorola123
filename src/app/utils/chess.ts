@@ -274,26 +274,29 @@ export class ChessGame {
     return this.isSquareAttacked(coordsToAlgebraic(kingPos[0], kingPos[1])!, opponentColor);
   }
 
+  // In ChessGame.ts
+
   getPossibleMoves(startSquare: Square, checkLegal = false): Square[] {
     const moves: Square[] = [];
     const startCoords = algebraicToCoords(startSquare);
     if (!startCoords) {
+      console.log(`Invalid square: ${startSquare}`);
       return moves;
     }
     const [row, col] = startCoords;
     const piece = this.board[row][col];
     const color = piece.toUpperCase() === piece ? WHITE : BLACK;
 
-    console.log(`getPossibleMoves wywołane dla pola ${startSquare}, checkLegal: ${checkLegal}, figura: ${piece}, kolor: ${color}, tura: ${this.turn}`); // Dodany log
-
+    console.log(`getPossibleMoves for ${startSquare} (piece: ${piece}, color: ${color})`);
     const internalMoves = this.getPossibleMovesInternal(row, col);
+
+    console.log(`Internal moves generated:`, internalMoves.map(move => coordsToAlgebraic(move[0], move[1])));
 
     for (const [endRow, endCol] of internalMoves) {
       const endSquare = coordsToAlgebraic(endRow, endCol)!;
       if (!checkLegal) {
         moves.push(endSquare);
       } else {
-        // Symuluj ruch i sprawdź, czy król nie jest w szachu
         const tempBoard = this.board.map(row => [...row]);
         const capturedPiece = tempBoard[endRow][endCol];
         tempBoard[endRow][endCol] = piece;
@@ -301,9 +304,12 @@ export class ChessGame {
         const isLegal = !this.isKingInCheckAfterMove(color, [row, col], [endRow, endCol], tempBoard);
         if (isLegal) {
           moves.push(endSquare);
+        } else {
+          console.log(`Move ${startSquare} to ${endSquare} is illegal (leaves king in check)`);
         }
       }
     }
+    console.log(`Legal moves:`, moves);
     return moves;
   }
 
@@ -313,7 +319,7 @@ export class ChessGame {
     const piece = boardState[endRow][endCol];
     const opponentColor = color === WHITE ? BLACK : WHITE;
 
-    console.log(`Sprawdzam, czy król koloru ${color} jest w szachu po ruchu ${coordsToAlgebraic(startRow, startCol)} na ${coordsToAlgebraic(endRow, endCol)}`);
+    console.log(`Checking if move ${coordsToAlgebraic(startRow, startCol)} to ${coordsToAlgebraic(endRow, endCol)} leaves king in check`);
 
     let kingRow: number | null = null;
     let kingCol: number | null = null;
@@ -335,27 +341,27 @@ export class ChessGame {
     }
 
     if (kingRow === null || kingCol === null) {
-      console.error('Nie znaleziono króla na planszy!');
+      console.error('King not found on the board!');
       return false;
     }
 
-    console.log(`Pozycja króla koloru ${color}: (${kingRow}, ${kingCol}) - ${coordsToAlgebraic(kingRow, kingCol)}`);
+    console.log(`King position after move: ${coordsToAlgebraic(kingRow, kingCol)}`);
 
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         const attacker = boardState[r][c];
         if (this.isOwnPiece(attacker, opponentColor)) {
           const possibleAttacks = this.getPossibleMovesInternal(r, c, true, boardState);
-          //console.log(`Potencjalny atakujący ${attacker} koloru ${opponentColor} na polu (${r}, ${c}) - ${coordsToAlgebraic(r, c)} ma możliwe ataki:`, possibleAttacks.map(coord => coordsToAlgebraic(coord[0], coord[1])));
+          console.log(`Attacker at ${coordsToAlgebraic(r, c)} (${attacker}) can attack:`, possibleAttacks.map(move => coordsToAlgebraic(move[0], move[1])));
           if (possibleAttacks.some(move => move[0] === kingRow && move[1] === kingCol)) {
-            //console.log(`Król koloru ${color} na polu (${kingRow}, ${kingCol}) - ${coordsToAlgebraic(kingRow, kingCol)} jest szachowany przez ${attacker} na polu (${r}, ${c}) - ${coordsToAlgebraic(r, c)}`);
+            console.log(`King is in check from ${coordsToAlgebraic(r, c)}`);
             return true;
           }
         }
       }
     }
 
-    //console.log(`Ruch konia nie powoduje szacha króla koloru ${color}.`);
+    console.log(`King is not in check after move`);
     return false;
   }
 
@@ -386,7 +392,7 @@ export class ChessGame {
           moves.push([newRow, newCol]);
         }
       }
-    } else if (piece.toLowerCase() === KNIGHT) {
+    } else   if (piece.toLowerCase() === KNIGHT) {
       const knightMoves = [
         [-2, -1], [-2, 1], [-1, -2], [-1, 2],
         [1, -2], [1, 2], [2, -1], [2, 1]
@@ -394,11 +400,14 @@ export class ChessGame {
       for (const [dr, dc] of knightMoves) {
         const newRow = row + dr;
         const newCol = col + dc;
-        if (isValidSquare(newRow, newCol) && !this.isOwnPiece(board[newRow][newCol], color)) {
-          moves.push([newRow, newCol]);
+        if (isValidSquare(newRow, newCol)) {
+          const targetPiece = board[newRow][newCol];
+          if (targetPiece === EMPTY || this.isOpponentPiece(targetPiece, color)) {
+            moves.push([newRow, newCol]);
+          }
         }
       }
-    } else if (piece.toLowerCase() === BISHOP) {
+    }else if (piece.toLowerCase() === BISHOP) {
       const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
       for (const [dr, dc] of directions) {
         for (let i = 1; i < 8; i++) {
@@ -452,19 +461,21 @@ export class ChessGame {
           }
         }
       }
-    } else if (piece.toLowerCase() === KING) {
+    } else   if (piece.toLowerCase() === KING) {
       const kingMoves = [
         [-1, -1], [-1, 0], [-1, 1],
         [0, -1],           [0, 1],
-        [1, -1], [1, 0], [1, 1]
+        [1, -1],  [1, 0],  [1, 1]
       ];
       for (const [dr, dc] of kingMoves) {
         const newRow = row + dr;
         const newCol = col + dc;
-        if (isValidSquare(newRow, newCol) && !this.isOwnPiece(board[newRow][newCol], color)) {
-          moves.push([newRow, newCol]);
+        if (isValidSquare(newRow, newCol)) {
+          const targetPiece = board[newRow][newCol];
+          if (targetPiece === EMPTY || this.isOpponentPiece(targetPiece, color)) {
+            moves.push([newRow, newCol]);
+          }
         }
-      }
       if (!forAttackCheck) {
         if (color === WHITE) {
           if (this.castlingRights[WHITE].kingside && board[7][5] === EMPTY && board[7][6] === EMPTY && board[7][7] === 'R' && !this.isSquareAttacked(E1, BLACK) && !this.isSquareAttacked('f1', BLACK) && !this.isSquareAttacked(G1, BLACK)) {
@@ -481,6 +492,7 @@ export class ChessGame {
             moves.push([0, 2]);
           }
         }
+      }
       }
     }
     return moves;
