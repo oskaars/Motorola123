@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { ChessGame, Color, PieceSymbol, Square, algebraicToCoords } from "@/app/utils/chess";
 
 interface ChessboardProps {
   maxSize?: number;
@@ -7,27 +8,64 @@ interface ChessboardProps {
   className?: string;
 }
 
-const Chessboard: React.FC<ChessboardProps> = ({ 
-  maxSize = 800,
-  minSize = 280,
-  className = ""
-}) => {
+const getPieceImage = (piece: PieceSymbol | ' '): string | null => {
+  if (piece === ' ') {
+    return null;
+  }
+  const color = piece === piece.toUpperCase() ? 'White' : 'Black';
+  const type = piece.toLowerCase();
+  let pieceName = '';
+  switch (type) {
+    case 'p':
+      pieceName = 'Pawn';
+      break;
+    case 'n':
+      pieceName = 'Knight';
+      break;
+    case 'b':
+      pieceName = 'Bishop';
+      break;
+    case 'r':
+      pieceName = 'Rook';
+      break;
+    case 'q':
+      pieceName = 'Queen';
+      break;
+    case 'k':
+      pieceName = 'King';
+      break;
+    default:
+      return null;
+  }
+  return `/pawns/${color}${pieceName}.svg`;
+};
+
+const Chessboard: React.FC<ChessboardProps> = ({
+                                                 maxSize = 800,
+                                                 minSize = 280,
+                                                 className = ""
+                                               }) => {
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
+  const [game] = useState(() => new ChessGame());
+  const [boardState, setBoardState] = useState(game.board);
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
 
   useEffect(() => {
+    setBoardState(game.board);
     const updateSize = () => {
       if (boardRef.current) {
         const container = boardRef.current.parentElement;
         const containerWidth = container ? container.clientWidth : 0;
-        
+
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        
+
         const smallerViewportDimension = Math.min(viewportWidth, viewportHeight);
-        
+
         let idealSize;
-        
+
         if (viewportWidth < 640) { // Mobile
           idealSize = Math.min(containerWidth * 0.95, smallerViewportDimension * 0.8, maxSize);
         } else if (viewportWidth < 1024) { // Tablet
@@ -35,31 +73,31 @@ const Chessboard: React.FC<ChessboardProps> = ({
         } else { // Desktop
           idealSize = Math.min(containerWidth * 0.75, smallerViewportDimension * 0.6, maxSize);
         }
-        
+
         const finalSize = Math.max(Math.min(idealSize, maxSize), minSize);
-        
+
         setBoardSize(finalSize);
       }
     };
 
     updateSize();
-    
+
     window.addEventListener("resize", updateSize);
     window.addEventListener("orientationchange", updateSize);
-    
+
     if (typeof ResizeObserver !== 'undefined') {
       const observer = new ResizeObserver(updateSize);
       if (boardRef.current?.parentElement) {
         observer.observe(boardRef.current.parentElement);
       }
-      
+
       return () => {
         observer.disconnect();
         window.removeEventListener("resize", updateSize);
         window.removeEventListener("orientationchange", updateSize);
       };
     }
-    
+
     return () => {
       window.removeEventListener("resize", updateSize);
       window.removeEventListener("orientationchange", updateSize);
@@ -68,6 +106,44 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
+
+
+  const handleSquareClick = (square: Square) => {
+    if (selectedSquare) {
+      // Spróbuj wykonać ruch
+      const moveResult = game.makeMove(selectedSquare, square);
+      if (moveResult) {
+        setBoardState(game.board); // Aktualizuj stan planszy po ruchu
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+      } else {
+        // Jeśli ruch nieudany, spróbuj wybrać nowe pole
+        const piece = game.getPiece(square);
+        const currentColor = game.turn;
+        const isOwnPiece = piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+        if (isOwnPiece) {
+          setSelectedSquare(square);
+          setPossibleMoves(game.getPossibleMoves(square, true));
+        } else {
+          setSelectedSquare(null);
+          setPossibleMoves([]);
+        }
+      }
+    }else {
+        // Wybierz pole
+        const piece = game.getPiece(square);
+        const currentColor = game.turn;
+        const isOwnPiece = piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+        if (isOwnPiece) {
+          setSelectedSquare(square);
+          setPossibleMoves(game.getPossibleMoves(square, true));
+        }
+      }
+    };
+
+  const isPossibleMove = (square: Square): boolean => {
+    return possibleMoves.includes(square);
+  };
 
   return (
     <div className={`flex flex-col items-center p-4 w-full mx-auto ${className}`}>
@@ -81,8 +157,8 @@ const Chessboard: React.FC<ChessboardProps> = ({
             <div className="flex flex-1">
               <div className="flex flex-col justify-around pr-2 text-gray-600 font-medium">
                 {ranks.map((rank) => (
-                  <div 
-                    key={rank} 
+                  <div
+                    key={rank}
                     className="flex items-center justify-center h-[12.5%] w-5 sm:w-6 md:w-8 text-sm sm:text-base md:text-lg"
                   >
                     {rank}
@@ -93,18 +169,36 @@ const Chessboard: React.FC<ChessboardProps> = ({
               <div className="flex-1 relative">
                 <div className="w-full h-full border-2 border-gray-700 shadow-lg rounded-sm overflow-hidden">
                   <div className="w-full h-full grid grid-cols-8 grid-rows-8">
-                    {ranks.map((rank, rankIndex) =>
-                      files.map((file, fileIndex) =>  (
-                        <div
-                          key={`${file}${rank}`}
-                          className={`w-full h-full ${
-                            (rankIndex + fileIndex) % 2 === 0
-                              ? "bg-[#f0d9b5]"
-                              : "bg-[#b58863]" 
-                          }`}
-                          data-square={`${file}${rank}`}
-                        />
-                      ))
+                    {boardState.map((row, rowIndex) =>
+                      row.map((piece, colIndex) => {
+                        const rank = ranks[rowIndex];
+                        const file = files[colIndex];
+                        const square = `${file}${rank}`;
+                        const pieceImage = getPieceImage(piece);
+                        const isSelected = selectedSquare === square;
+                        const isMoveableTo = isPossibleMove(square);
+
+                        return (
+                          <div
+                            key={square}
+                            className={`w-full h-full flex items-center justify-center cursor-pointer
+                              ${(rowIndex + colIndex) % 2 === 0 ? "bg-[#f0d9b5]" : "bg-[#b58863]"}
+                              ${isSelected ? "bg-yellow-300" : ""}
+                              ${isMoveableTo ? "bg-green-300" : ""}
+                            `}
+                            data-square={square}
+                            onClick={() => handleSquareClick(square)}
+                          >
+                            {pieceImage && (
+                              <img
+                                src={pieceImage}
+                                alt={piece}
+                                className="w-4/5 h-4/5"
+                              />
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -114,8 +208,8 @@ const Chessboard: React.FC<ChessboardProps> = ({
             <div className="flex pl-7 mt-1">
               <div className="flex-1 grid grid-cols-8 text-gray-600 font-medium">
                 {files.map((file) => (
-                  <div 
-                    key={file} 
+                  <div
+                    key={file}
                     className="flex items-center justify-center text-sm sm:text-base md:text-lg"
                   >
                     {file}
@@ -131,3 +225,5 @@ const Chessboard: React.FC<ChessboardProps> = ({
 };
 
 export default Chessboard;
+
+
