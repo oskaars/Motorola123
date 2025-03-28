@@ -2,7 +2,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { ChessGame, PieceSymbol, Square } from "@/app/utils/chess";
-import EngineControls from "./EngineControls";
+import WebSocketClient from '@/app/lib/websocket';
 
 interface ChessboardProps {
   maxSize?: number;
@@ -54,6 +54,38 @@ const Chessboard: React.FC<ChessboardProps> = ({
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
   const [isCheckmate, setIsCheckmate] = useState<boolean>(false);
+  const [wsClient, setWsClient] = useState<WebSocketClient | null>(null);
+  const [roomId, setRoomId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const client = new WebSocketClient("Player1");
+    setWsClient(client);
+
+    client.addEventListener('ROOM_CREATED', (data) => {
+      setRoomId(data.roomId);
+      console.log(`Room created: ${data.roomId}`);
+    });
+
+    client.addEventListener('JOINED_ROOM', (data) => {
+      setRoomId(data.roomId);
+      console.log(`Joined room: ${data.roomId}`);
+    });
+
+    client.addEventListener('OPPONENT_MOVE', (data) => {
+      const moveResult = game.makeMove(data.notation.split(' ')[0], data.notation.split(' ')[1]);
+      if (moveResult) {
+        setBoardState(game.board);
+        if (game.isCheckmate()) {
+          setIsCheckmate(true);
+          console.log("Checkmate!");
+        }
+      }
+    });
+
+    return () => {
+      client.leaveRoom();
+    };
+  }, []);
 
   useEffect(() => {
     const updateSize = () => {
@@ -110,7 +142,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
 
   const handleSquareClick = (square: Square) => {
-    if (isCheckmate) {
+    if (isCheckmate || !wsClient) {
       return;
     }
 
@@ -124,6 +156,10 @@ const Chessboard: React.FC<ChessboardProps> = ({
         if (game.isCheckmate()) {
           setIsCheckmate(true);
           console.log("Checkmate!");
+        }
+
+        if (wsClient && roomId) {
+          wsClient.sendMove(`${selectedSquare}${square}`);
         }
       } else {
         const piece = game.getPiece(square);
@@ -150,6 +186,19 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
   const isPossibleMove = (square: Square): boolean => {
     return possibleMoves.includes(square);
+  };
+
+  const createRoom = () => {
+    if (wsClient) {
+      wsClient.createRoom();
+    }
+  };
+
+  const joinRoom = () => {
+    const roomId = prompt('Enter room ID:');
+    if (roomId && wsClient) {
+      wsClient.joinRoom(roomId);
+    }
   };
 
   return (
@@ -234,7 +283,20 @@ const Chessboard: React.FC<ChessboardProps> = ({
         </div>
       </div>
 
-      <EngineControls />
+      <div className="mt-4 flex justify-center space-x-4">
+        <button
+          onClick={createRoom}
+          className="px-4 py-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white"
+        >
+          Create Room
+        </button>
+        <button
+          onClick={joinRoom}
+          className="px-4 py-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white"
+        >
+          Join Room
+        </button>
+      </div>
     </div>
   );
 };

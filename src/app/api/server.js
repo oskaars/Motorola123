@@ -1,3 +1,4 @@
+// server.js
 const WebSocket = require('ws');
 
 const wss = new WebSocket.Server({ port: 8080 });
@@ -50,7 +51,8 @@ wss.on('connection', (ws) => {
             client.ws.send(JSON.stringify({
               type: 'MESSAGE',
               message: data.message,
-              sender: data.sender }));
+              sender: data.sender
+            }));
           });
         }
         break;
