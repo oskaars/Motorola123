@@ -191,7 +191,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
       } else {
         const piece = game.getPiece(square);
         const currentColor = game.turn;
-        const isOwnPiece = piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+        const isOwnPiece = piece !== null && piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
         if (isOwnPiece) {
           setSelectedSquare(square);
           setPossibleMoves(game.getPossibleMoves(square, true));
@@ -203,7 +203,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
     } else {
       const piece = game.getPiece(square);
       const currentColor = game.turn;
-      const isOwnPiece = piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+      const isOwnPiece = piece !== null && piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
       if (isOwnPiece) {
         setSelectedSquare(square);
         setPossibleMoves(game.getPossibleMoves(square, true));

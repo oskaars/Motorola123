@@ -1,4 +1,3 @@
-// components/EngineControls.tsx
 "use client";
 import { useState, useEffect } from 'react';
 
@@ -8,7 +7,6 @@ export default function EngineControls() {
 
   const analyzePosition = async () => {
     setLoading(true);
-    // Simulate engine analysis
     setTimeout(() => {
       setBestMove('e2e4');
       setLoading(false);

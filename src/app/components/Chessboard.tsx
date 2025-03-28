@@ -1,4 +1,3 @@
-// components/Chessboard.tsx
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { ChessGame, PieceSymbol, Square } from "@/app/utils/chess";
@@ -42,11 +41,7 @@ const getPieceImage = (piece: PieceSymbol | ' '): string | null => {
   return `/pawns/${color}${pieceName}.svg`;
 };
 
-const Chessboard: React.FC<ChessboardProps> = ({
-                                                 maxSize = 800,
-                                                 minSize = 280,
-                                                 className = ""
-                                               }) => {
+const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800, minSize = 280,className = ""}) => {
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
   const [game] = useState(() => new ChessGame());
@@ -61,17 +56,17 @@ const Chessboard: React.FC<ChessboardProps> = ({
     const client = new WebSocketClient("Player1");
     setWsClient(client);
 
-    client.addEventListener('ROOM_CREATED', (data) => {
+    client.addEventListener('ROOM_CREATED', (data: { roomId: React.SetStateAction<string | null>; }) => {
       setRoomId(data.roomId);
       console.log(`Room created: ${data.roomId}`);
     });
 
-    client.addEventListener('JOINED_ROOM', (data) => {
+    client.addEventListener('JOINED_ROOM', (data: { roomId: React.SetStateAction<string | null>; }) => {
       setRoomId(data.roomId);
       console.log(`Joined room: ${data.roomId}`);
     });
 
-    client.addEventListener('OPPONENT_MOVE', (data) => {
+    client.addEventListener('OPPONENT_MOVE', (data: { notation: string; }) => {
       const moveResult = game.makeMove(data.notation.split(' ')[0], data.notation.split(' ')[1]);
       if (moveResult) {
         setBoardState(game.board);
@@ -164,7 +159,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
       } else {
         const piece = game.getPiece(square);
         const currentColor = game.turn;
-        const isOwnPiece = piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+        const isOwnPiece = piece !== null && piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
         if (isOwnPiece) {
           setSelectedSquare(square);
           setPossibleMoves(game.getPossibleMoves(square, true));
@@ -176,7 +171,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
     } else {
       const piece = game.getPiece(square);
       const currentColor = game.turn;
-      const isOwnPiece = piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+      const isOwnPiece = piece !== null && piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
       if (isOwnPiece) {
         setSelectedSquare(square);
         setPossibleMoves(game.getPossibleMoves(square, true));
