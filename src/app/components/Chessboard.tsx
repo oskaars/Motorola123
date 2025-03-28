@@ -1,6 +1,8 @@
+// components/Chessboard.tsx
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { ChessGame, Color, PieceSymbol, Square, algebraicToCoords } from "@/app/utils/chess";
+import { ChessGame, PieceSymbol, Square } from "@/app/utils/chess";
+import EngineControls from "./EngineControls";
 
 interface ChessboardProps {
   maxSize?: number;
@@ -51,9 +53,9 @@ const Chessboard: React.FC<ChessboardProps> = ({
   const [boardState, setBoardState] = useState(game.board);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
+  const [isCheckmate, setIsCheckmate] = useState<boolean>(false);
 
   useEffect(() => {
-    setBoardState(game.board);
     const updateSize = () => {
       if (boardRef.current) {
         const container = boardRef.current.parentElement;
@@ -107,17 +109,23 @@ const Chessboard: React.FC<ChessboardProps> = ({
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
 
-
   const handleSquareClick = (square: Square) => {
+    if (isCheckmate) {
+      return;
+    }
+
     if (selectedSquare) {
-      // Spróbuj wykonać ruch
       const moveResult = game.makeMove(selectedSquare, square);
       if (moveResult) {
-        setBoardState(game.board); // Aktualizuj stan planszy po ruchu
+        setBoardState(game.board);
         setSelectedSquare(null);
         setPossibleMoves([]);
+
+        if (game.isCheckmate()) {
+          setIsCheckmate(true);
+          console.log("Checkmate!");
+        }
       } else {
-        // Jeśli ruch nieudany, spróbuj wybrać nowe pole
         const piece = game.getPiece(square);
         const currentColor = game.turn;
         const isOwnPiece = piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
@@ -129,17 +137,16 @@ const Chessboard: React.FC<ChessboardProps> = ({
           setPossibleMoves([]);
         }
       }
-    }else {
-        // Wybierz pole
-        const piece = game.getPiece(square);
-        const currentColor = game.turn;
-        const isOwnPiece = piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
-        if (isOwnPiece) {
-          setSelectedSquare(square);
-          setPossibleMoves(game.getPossibleMoves(square, true));
-        }
+    } else {
+      const piece = game.getPiece(square);
+      const currentColor = game.turn;
+      const isOwnPiece = piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+      if (isOwnPiece) {
+        setSelectedSquare(square);
+        setPossibleMoves(game.getPossibleMoves(square, true));
       }
-    };
+    }
+  };
 
   const isPossibleMove = (square: Square): boolean => {
     return possibleMoves.includes(square);
@@ -147,6 +154,11 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
   return (
     <div className={`flex flex-col items-center p-4 w-full mx-auto ${className}`}>
+      {isCheckmate && (
+        <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center text-white text-4xl font-bold">
+          CHECKMATE!
+        </div>
+      )}
       <div
         ref={boardRef}
         className="relative w-full"
@@ -185,6 +197,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
                               ${(rowIndex + colIndex) % 2 === 0 ? "bg-[#f0d9b5]" : "bg-[#b58863]"}
                               ${isSelected ? "bg-yellow-300" : ""}
                               ${isMoveableTo ? "bg-green-300" : ""}
+                              ${isCheckmate ? "bg-red-300" : ""}
                             `}
                             data-square={square}
                             onClick={() => handleSquareClick(square)}
@@ -220,10 +233,10 @@ const Chessboard: React.FC<ChessboardProps> = ({
           </div>
         </div>
       </div>
+
+      <EngineControls />
     </div>
   );
 };
 
 export default Chessboard;
-
-

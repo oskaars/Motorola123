@@ -5,6 +5,15 @@ const nextConfig: NextConfig = {
 };
 
 module.exports = {
+  async redirects() {
+    return [
+      {
+        source: '/api/engine',
+        destination: '/api/engine',
+        permanent: true,
+      },
+    ];
+  },
   webpack: (config: any, { isServer }: { isServer: boolean }) => {
     if (!isServer) {
       config.resolve.fallback = { fs: false, tls: false, net: false };

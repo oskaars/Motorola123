@@ -352,7 +352,7 @@ export class ChessGame {
         const attacker = boardState[r][c];
         if (this.isOwnPiece(attacker, opponentColor)) {
           const possibleAttacks = this.getPossibleMovesInternal(r, c, true, boardState);
-          console.log(`Attacker at ${coordsToAlgebraic(r, c)} (${attacker}) can attack:`, possibleAttacks.map(move => coordsToAlgebraic(move[0], move[1])));
+          //console.log(`Attacker at ${coordsToAlgebraic(r, c)} (${attacker}) can attack:`, possibleAttacks.map(move => coordsToAlgebraic(move[0], move[1])));
           if (possibleAttacks.some(move => move[0] === kingRow && move[1] === kingCol)) {
             console.log(`King is in check from ${coordsToAlgebraic(r, c)}`);
             return true;
