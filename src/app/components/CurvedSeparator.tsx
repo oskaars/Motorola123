@@ -79,7 +79,7 @@ const CurvedSeparator = () => {
           />
 
           <Marquee
-            speed={50}
+            speed={30}
             gradient={false}
             autoFill={true}
             className="py-[2vh] "
@@ -90,7 +90,7 @@ const CurvedSeparator = () => {
                 href={logo.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center flex-shrink-0 cursor-pointer group mx-8"
+                className="flex items-center flex-shrink-0 cursor-pointer group mx-8 "
                 style={{
                   filter: "grayscale(100%)",
                 }}

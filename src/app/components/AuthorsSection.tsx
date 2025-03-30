@@ -40,7 +40,10 @@ const AuthorsSection = ({ authors }: { authors?: Author[] }) => {
   const displayAuthors = authors || defaultAuthors;
 
   return (
-    <div className="min-h-screen py-[10vh] md:px-[4vw] bg-gray-900/60 flex flex-col justify-center items-center w-full">
+    <div
+      id="authors"
+      className="min-h-screen py-[10vh] md:px-[4vw] bg-gray-900/60 flex flex-col justify-center items-center w-full"
+    >
       <h2 className="relative z-[11] text-[10vh] md:text-[6vh] font-bold text-center mb-[10vh] bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent scale-0 intersect-once intersect:scale-100 intersect:opacity-100  transition duration-[2s]">
         AUTHORS
       </h2>

@@ -65,10 +65,10 @@ const FeatureCards = () => {
           @keyframes breathe {
             0%,
             100% {
-              opacity: 0.4;
+              opacity: 1;
             }
             50% {
-              opacity: 1;
+              opacity: 0.6;
             }
           }
 

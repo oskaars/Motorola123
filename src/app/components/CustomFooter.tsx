@@ -1,6 +1,8 @@
+import React from "react";
+
 const CustomFooter = () => {
   return (
-    <div className="w-full bg-gray-800  relative overflow-hidden">
+    <footer className="w-full bg-gray-800 relative overflow-hidden mt-auto">
       {/* Animated gradient border */}
       <div className="absolute top-0 left-0 w-full h-[0.4vh] bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-gradient-shift" />
 
@@ -18,25 +20,26 @@ const CustomFooter = () => {
             Project made for Motorola Science Cup 2025 contest
           </p>
         </div>
-        <style jsx global>{`
-          @keyframes gradient-shift {
-            0% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
-            }
-            100% {
-              background-position: 0% 50%;
-            }
-          }
-          .animate-gradient-shift {
-            background-size: 200% 200%;
-            animation: gradient-shift 3s ease infinite;
-          }
-        `}</style>
       </div>
-    </div>
+
+      <style jsx global>{`
+        @keyframes gradient-shift {
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+        .animate-gradient-shift {
+          background-size: 200% 200%;
+          animation: gradient-shift 3s ease infinite;
+        }
+      `}</style>
+    </footer>
   );
 };
 

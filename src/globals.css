@@ -2,7 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-
+html {
+    scroll-behavior: smooth;
+}
 
 :root {
   --primary: #1c1c1c;      
@@ -125,17 +127,6 @@ body {
   }
 }
 
-/* Custom gradient animation */
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.animate-gradient-shift {
-  background-size: 300% 300%;
-  animation: gradient-shift 8s ease infinite;
-}
 
 /* Smooth button transitions */
 button {
@@ -147,4 +138,42 @@ button {
 /* Glow effect for primary button */
 .hover\:shadow-2xl:hover {
   box-shadow: 0 0 40px rgba(192, 132, 252, 0.4);
+}
+
+@keyframes breathing-gradient {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
+.hover\:breathing-gradient:hover {
+  animation: breathing-gradient 3s ease-in-out infinite;
+}
+
+
+/* Global custom scroll bar styles */
+
+::-webkit-scrollbar {
+  width: 8px;
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    45deg,
+    rgba(168, 85, 247, 0.9),
+    rgba(236, 72, 153, 0.9)
+  );
+  border-radius: 9999px;
+  border: 5px solid transparent;
+  background-clip: content-box;
+}
+
+* {
+  scrollbar-width: normal;
+  scrollbar-color: rgba(180, 64, 226, 0.9) transparent;
 }

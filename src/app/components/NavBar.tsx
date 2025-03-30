@@ -93,14 +93,38 @@ const NavBar: React.FC = () => {
           {/* Desktop Menu */}
           <div className="hidden md:flex flex-row items-center gap-[4vw]">
             <Link
-              href="#play"
+              href="/"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="text-[2vh] hover:cursor-pointer underline-animation motion-delay-[200ms] motion-opacity-in-0 motion-translate-y-in-[4vh] motion-duration-1000"
             >
-              Play Now
+              Home
             </Link>
             <Link
-              href="#authors"
+              href="/play"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="text-[2vh] hover:cursor-pointer motion-delay-[200ms] motion-opacity-in-0 motion-translate-y-in-[4vh] motion-duration-1000"
+            >
+              <div
+                className="group relative rounded-full overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl "
+                style={{
+                  padding: "2.5vh 9vh",
+                  borderRadius: "50vh",
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-600 opacity-100 group-hover:opacity-0 transition-opacity duration-300 flex justify-center items-center ">
+                  <span className="relative font-semibold text-white">
+                    PLAY NOW
+                  </span>
+                </div>
+                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 z-[99] transition-opacity duration-300 flex justify-center items-center">
+                  <span className="relative font-semibold text-pink-600">
+                    PLAY NOW
+                  </span>
+                </div>
+              </div>
+            </Link>
+            <Link
+              href="/#authors"
               className="text-[2vh] hover:cursor-pointer underline-animation motion-delay-[250ms] motion-opacity-in-0 motion-translate-y-in-[4vh] motion-duration-1000"
             >
               Authors
@@ -146,26 +170,56 @@ const NavBar: React.FC = () => {
         className={`fixed pt-[8vh] left-0 w-full bg-black/90 backdrop-blur-lg z-40 transition-all duration-300 md:hidden ${
           isMenuOpen ? "translate-y-0" : "-translate-y-full"
         }`}
-        style={{ height: "40vh" }}
+        style={{ height: "50vh" }}
       >
         <div className="flex flex-col items-center gap-[4vh] pt-[4vh] px-[5vw]">
           <Link
-            href="#play"
+            href="/"
             onClick={() => {
               window.scrollTo({ top: 0, behavior: "smooth" });
               setIsMenuOpen(false);
             }}
             className="text-[2.5vh] text-white hover:cursor-pointer underline-animation"
           >
-            Play Now
+            Home
           </Link>
+
           <Link
-            href="#authors"
+            href="/play"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              setIsMenuOpen(false);
+            }}
+            className="text-[2.5vh] text-white hover:cursor-pointer "
+          >
+            <div
+              className="group relative rounded-full overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl "
+              style={{
+                padding: "3vh 20vh",
+                borderRadius: "50vh",
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-600 opacity-100 group-hover:opacity-0 transition-opacity duration-300 flex justify-center items-center ">
+                <span className="relative font-semibold text-white">
+                  PLAY NOW
+                </span>
+              </div>
+              <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 z-[99] transition-opacity duration-300 flex justify-center items-center">
+                <span className="relative font-semibold text-pink-600">
+                  PLAY NOW
+                </span>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/#authors"
             onClick={() => setIsMenuOpen(false)}
             className="text-[2.5vh] text-white hover:cursor-pointer underline-animation"
           >
             Authors
           </Link>
+
           <p className="text-[2.5vh] text-white hover:cursor-pointer underline-animation">
             Documentation
           </p>
