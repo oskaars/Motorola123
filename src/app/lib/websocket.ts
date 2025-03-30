@@ -88,7 +88,16 @@ export class WebSocketClient {
 
   joinRoom(roomId: string) {
     this.roomId = roomId;
-    this.socket.send(JSON.stringify({ type: 'JOIN_ROOM', roomId, username: this.username }));
+    this.socket.send(JSON.stringify({
+      type: 'JOIN_ROOM',
+      roomId,
+      username: this.username
+    }));
+
+    // Queue color request after server acknowledgement
+    this.addEventListener('JOINED_ROOM', () => {
+      setTimeout(() => this.sendRequestColor(), 100);
+    });
   }
 
   sendMessage(message: string) {
@@ -115,26 +124,43 @@ export class WebSocketClient {
       console.error("Cannot send move: Not in a room");
     }
   }
-
-  sendRequestColor() {
+  sendTimeOut(winner: string) {
     if (this.roomId) {
-      console.log(`Requesting color assignment for ${this.username} in room ${this.roomId}`);
       this.socket.send(JSON.stringify({
-        type: 'REQUEST_COLOR',
+        type: 'TIME_OUT',
         roomId: this.roomId,
-        username: this.username
+        winner
       }));
-    } else {
-      console.error("Cannot request color: Not in a room");
     }
   }
 
-  leaveRoom() {
+  sendResignation(winner: string) {
+    if (this.roomId) {
+      this.socket.send(JSON.stringify({
+        type: 'RESIGN',
+        roomId: this.roomId,
+        winner
+      }));
+    }
+  }
+  leaveRoom(){
     if (this.roomId) {
       this.socket.send(JSON.stringify({ type: 'LEAVE_ROOM', roomId: this.roomId }));
       this.roomId = null;
     }
   }
+  sendRequestColor() {
+    if (!this.roomId) {
+      console.error('Room ID missing in color request');
+      return;
+    }
+    this.socket.send(JSON.stringify({
+      type: 'REQUEST_COLOR',
+      roomId: this.roomId,
+      username: this.username
+    }));
+  }
+
 }
 
 export default WebSocketClient;

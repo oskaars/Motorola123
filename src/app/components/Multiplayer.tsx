@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { algebraicToCoords, ChessGame, PieceSymbol, Square,  } from "@/app/utils/chess";
-import WebSocketClient from '@/app/lib/websocket';
+import {WebSocketClient} from '@/app/lib/websocket';
 
 interface ChessboardProps {
   maxSize?: number;
@@ -47,16 +47,15 @@ const formatTime = (seconds: number) => {
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-const PlayerInfoBar = ({ 
-  color, 
-  username, 
-  avatar, 
-  timeLeft, 
-  isActive 
-}: { 
-  color: 'white' | 'black', 
-  username: string, 
-  avatar: string, 
+const PlayerInfoBar = ({
+  username,
+  avatar,
+  timeLeft,
+  isActive
+}: {
+  color: 'white' | 'black',
+  username: string,
+  avatar: string,
   timeLeft: number,
   isActive: boolean
 }) => (
@@ -96,7 +95,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
     white: { username: "Player 1", avatar: "/pawns/WhiteKing.svg" },
     black: { username: "Player 2", avatar: "/pawns/BlackKing.svg" }
   });
-  const [whiteTime, setWhiteTime] = useState<number>(600); 
+  const [whiteTime, setWhiteTime] = useState<number>(600);
   const [blackTime, setBlackTime] = useState<number>(600);
   const [activeTimer, setActiveTimer] = useState<'white' | 'black'>('white');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,11 +125,27 @@ const Chessboard: React.FC<ChessboardProps> = ({
       sender: string;
       message: string;
     }
+    client.addEventListener('GAME_OVER', (data: { reason: string, winner: string }) => {
+      setIsCheckmate(true);
+      setChatMessages(prev => [
+        ...prev,
+        `Game over! ${data.winner} wins by ${data.reason}`
+      ]);
+      if (timerRef.current) clearInterval(timerRef.current);
+    });
 
+    client.addEventListener('RESIGN', (data: { winner: string }) => {
+      setIsCheckmate(true);
+      setChatMessages(prev => [
+        ...prev,
+        `Game resigned! ${data.winner} wins`
+      ]);
+      if (timerRef.current) clearInterval(timerRef.current);
+    });
     client.addEventListener('ROOM_CREATED', (data: RoomCreatedData) => {
       setRoomId(data.roomId);
       setChatMessages(prev => [
-        ...prev, 
+        ...prev,
         `Room created! Your room ID is: ${data.roomId}`,
         "Share this ID with your opponent to join the game."
       ]);
@@ -157,27 +172,27 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
     client.addEventListener('OPPONENT_MOVE', (data: OpponentMoveData) => {
       console.log(`Received opponent move: ${data.notation} from ${data.sender}`);
-      
+
       let moveResult;
-      
+
       if (data.notation.length > 4) {
         const from = data.notation.substring(0, 2);
         const to = data.notation.substring(2, 4);
         const promotionPiece = data.notation.substring(4) as PieceSymbol;
-        
+
         console.log(`Opponent promoting from ${from} to ${to} as ${promotionPiece}`);
         moveResult = game.makeMove(from, to, promotionPiece);
       } else {
         moveResult = game.makeMove(data.notation.substring(0, 2), data.notation.substring(2, 4));
       }
-      
+
       if (moveResult) {
         setBoardState(JSON.parse(JSON.stringify(game.board)));
         setChatMessages(prev => [...prev, `${data.sender} moved: ${data.notation}`]);
-        
+
         // Toggle timer after opponent's move
         setActiveTimer(game.turn === 'w' ? 'white' : 'black');
-        
+
         if (game.isCheckmate()) {
           setIsCheckmate(true);
           console.log("Checkmate!");
@@ -196,7 +211,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
       setPlayerColor(data.color);
       setChatMessages(prev => [...prev, `You are playing as ${data.color}`]);
       const playerUsername = client.username;
-      
+
       if (data.color === 'white') {
         setPlayerInfo(prev => ({
           ...prev,
@@ -204,34 +219,56 @@ const Chessboard: React.FC<ChessboardProps> = ({
         }));
       } else {
         setPlayerInfo(prev => ({
-          ...prev, 
+          ...prev,
           black: { ...prev.black, username: playerUsername }
         }));
       }
     });
 
-    client.addEventListener('GAME_READY', (data: { 
-      whitePlayer: string, 
+    client.addEventListener('GAME_READY', (data: {
+      whitePlayer: string,
       blackPlayer: string,
-      timeInSeconds: number 
+      timeInSeconds: number
     }) => {
-      console.log('Game ready event received:', data);
+      // Validation layer
+      if (data.whitePlayer === data.blackPlayer) {
+        console.error('Server sent invalid player assignment:', data);
+        setChatMessages(prev => [...prev, "Server error: Invalid game setup"]);
+        return;
+      }
+
+      if (data.whitePlayer === client.username) {
+        setPlayerColor('white');
+      } else if (data.blackPlayer === client.username) {
+        setPlayerColor('black');
+      } else {
+        console.error('Player assignment mismatch');
+        setChatMessages(prev => [...prev, "Connection error: Wrong player assignment"]);
+        return;
+      }
+
+      // Proceed with valid setup
       setGameReady(true);
       setWhiteTime(data.timeInSeconds);
       setBlackTime(data.timeInSeconds);
       setActiveTimer('white');
-      
+
       setPlayerInfo({
-        white: { username: data.whitePlayer, avatar: "/pawns/WhiteKing.svg" },
-        black: { username: data.blackPlayer, avatar: "/pawns/BlackKing.svg" }
+        white: {
+          username: data.whitePlayer,
+          avatar: "/pawns/WhiteKing.svg"
+        },
+        black: {
+          username: data.blackPlayer,
+          avatar: "/pawns/BlackKing.svg"
+        }
       });
-      
-      setChatMessages(prev => [...prev, 'Game is ready! White player moves first.']);
     });
+
 
     client.addEventListener('ROOM_FULL', (data: { message: string }) => {
       setChatMessages(prev => [...prev, data.message]);
-      client.sendRequestColor(); 
+      client.sendRequestColor();
     });
 
     return () => {
@@ -291,38 +328,29 @@ const Chessboard: React.FC<ChessboardProps> = ({
   }, [minSize, maxSize]);
 
   useEffect(() => {
-    if (roomId && wsClient && gameReady) { 
-      if (timerRef.current) clearInterval(timerRef.current);
-      
+    if (gameReady && roomId) {
       timerRef.current = setInterval(() => {
-        if (activeTimer === 'white') {
-          setWhiteTime(prev => {
-            if (prev <= 0) {
-              clearInterval(timerRef.current!);
-              setChatMessages(prev => [...prev, "White player ran out of time!"]);
-              setIsCheckmate(true);
-              return 0;
-            }
-            return prev - 1;
-          });
-        } else {
-          setBlackTime(prev => {
-            if (prev <= 0) {
-              clearInterval(timerRef.current!);
-              setChatMessages(prev => [...prev, "Black player ran out of time!"]);
-              setIsCheckmate(true);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }
+        setWhiteTime(prev => {
+          if (prev <= 0) {
+            wsClient?.sendTimeOut(playerInfo.black.username);
+            return 0;
+          }
+          return activeTimer === 'white' ? prev - 1 : prev;
+        });
+
+        setBlackTime(prev => {
+          if (prev <= 0) {
+            wsClient?.sendTimeOut(playerInfo.white.username);
+            return 0;
+          }
+          return activeTimer === 'black' ? prev - 1 : prev;
+        });
       }, 1000);
     }
-    
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [roomId, wsClient, activeTimer, gameReady]); 
+  }, [activeTimer, gameReady]);
 
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
@@ -331,10 +359,10 @@ const Chessboard: React.FC<ChessboardProps> = ({
     if (isCheckmate || !wsClient || !playerColor) {
       return;
     }
-    
-    const isPlayerTurn = (game.turn === 'w' && playerColor === 'white') || 
+
+    const isPlayerTurn = (game.turn === 'w' && playerColor === 'white') ||
                          (game.turn === 'b' && playerColor === 'black');
-    
+
     if (!isPlayerTurn) {
       setChatMessages(prev => [...prev, "It's not your turn"]);
       return;
@@ -345,14 +373,14 @@ const Chessboard: React.FC<ChessboardProps> = ({
       if (piece && piece.toLowerCase() === 'p') {
         const startCoords = algebraicToCoords(selectedSquare);
         const endCoords = algebraicToCoords(square);
-        
+
         if (startCoords && endCoords) {
           const isPawn = piece.toLowerCase() === 'p';
-          const isLastRank = (game.turn === 'w' && endCoords[0] === 0) || 
+          const isLastRank = (game.turn === 'w' && endCoords[0] === 0) ||
                             (game.turn === 'b' && endCoords[0] === 7);
-          
+
           const validMoves = game.getPossibleMoves(selectedSquare, true);
-          
+
           if (isPawn && isLastRank && validMoves.includes(square)) {
             console.log("PROMOTION MOVE DETECTED!");
             setPromotionSquare(square);
@@ -362,13 +390,13 @@ const Chessboard: React.FC<ChessboardProps> = ({
           }
         }
       }
-      
+
       const moveResult = game.makeMove(selectedSquare, square);
       if (moveResult) {
         setBoardState(JSON.parse(JSON.stringify(game.board)));
         setSelectedSquare(null);
         setPossibleMoves([]);
-        
+
         // Toggle timer
         setActiveTimer(game.turn === 'w' ? 'white' : 'black');
 
@@ -386,10 +414,10 @@ const Chessboard: React.FC<ChessboardProps> = ({
       } else {
         const piece = game.getPiece(square);
         const currentColor = game.turn;
-        const isOwnPiece = piece !== null && piece !== ' ' && 
-          ((currentColor === 'w' && piece === piece.toUpperCase()) || 
+        const isOwnPiece = piece !== null && piece !== ' ' &&
+          ((currentColor === 'w' && piece === piece.toUpperCase()) ||
            (currentColor === 'b' && piece === piece.toLowerCase()));
-           
+
         if (isOwnPiece) {
           setSelectedSquare(square);
           setPossibleMoves(game.getPossibleMoves(square, true));
@@ -414,26 +442,26 @@ const Chessboard: React.FC<ChessboardProps> = ({
       console.error("Missing promotion squares");
       return;
     }
-    
+
     console.log(`Promoting pawn from ${promotionFromSquare} to ${promotionSquare} as ${promotionPiece}`);
-    
+
     const moveResult = game.makeMove(promotionFromSquare, promotionSquare, promotionPiece);
-    
+
     if (moveResult) {
       console.log(`Promotion successful, new piece: ${game.getPiece(promotionSquare)}`);
-      
+
       setBoardState([...game.board]);
       setSelectedSquare(null);
       setPossibleMoves([]);
-      
+
       setActiveTimer(game.turn === 'w' ? 'white' : 'black');
-      
+
       if (game.isCheckmate()) {
         setIsCheckmate(true);
         console.log("Checkmate!");
         setChatMessages(prev => [...prev, "Checkmate!"]);
       }
-      
+
       if (wsClient && roomId) {
         const moveNotation = `${promotionFromSquare}${promotionSquare}${promotionPiece}`;
         console.log(`Sending move with promotion: ${moveNotation}`);
@@ -443,7 +471,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
     } else {
       console.error('Promotion move failed');
     }
-    
+
     setShowPromotion(false);
     setPromotionSquare(null);
     setPromotionFromSquare(null);
@@ -495,7 +523,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
                   case 'n': pieceName = 'Knight'; break;
                 }
                 return (
-                  <div 
+                  <div
                     key={piece}
                     className="w-16 h-16 m-1 flex items-center justify-center cursor-pointer border border-gray-300 hover:bg-gray-100"
                     onClick={() => handlePromotion(piece)}
@@ -513,7 +541,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         </div>
       )}
       <div className="w-full" style={{ maxWidth: `${boardSize}px` }}>
-        <PlayerInfoBar 
+        <PlayerInfoBar
           color="black"
           username={playerInfo.black.username}
           avatar={playerInfo.black.avatar}
@@ -597,7 +625,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
       </div>
 
       <div className="w-full" style={{ maxWidth: `${boardSize}px` }}>
-      <PlayerInfoBar 
+      <PlayerInfoBar
         color="white"
         username={playerInfo.white.username}
         avatar={playerInfo.white.avatar}
@@ -632,7 +660,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
               </button>
             </div>
           </div>
-          
+
           <div className="flex justify-center space-x-4">
             <button
               onClick={createRoom}
@@ -649,7 +677,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
           </div>
         </>
       )}
-      
+
       {roomId && (
         <div className="flex justify-center">
           <button
@@ -661,7 +689,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         </div>
       )}
     </div>
-    
+
     {/* Room ID display */}
     {roomId && (
       <div className="mt-4 w-full max-w-md">
@@ -682,7 +710,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         </div>
       </div>
     )}
-    
+
     {/* Game status */}
     {roomId && !gameReady && (
       <div className="mt-4 w-full max-w-md">
@@ -691,7 +719,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         </div>
       </div>
     )}
-    
+
     {/* Chat section */}
     <div className="mt-4 w-full max-w-md">
       <div className="bg-gray-100 p-4 rounded-lg shadow-md">
