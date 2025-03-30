@@ -1,3 +1,150 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+
+:root {
+  --primary: #1c1c1c;      
+  --secondary: #f5f5f5;     
+  --accent: #cfa05b;        
+  --bg-dark: #141414;       
+  --text-main: #d4c39a;     
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #1c1c1c;
+    --secondary: #f5f5f5;
+    --accent: #cfa05b;
+    --accent-dark: #a77a36;
+    --bg-dark: #141414;
+    --text-main: #d4c39a;
+    
+  }
+}
+
+body {
+  color: var(--text-main);
+  background: var(--bg-dark);
+  font-family: 'Poppins', sans-serif;
+}
+
+.bg-dark {
+  background-color: var(--bg-dark)
+}
+
+/* Animacja podkreślenia linków */
+@layer components {
+    .underline-animation {
+      @apply relative;
+      transition: transform 0.3s ease-in-out;
+      color: white;
+    }
+  
+    .underline-animation::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 0.2vh;
+      left: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, 
+        #8a2be2,  
+        #9370db,  
+        #4169e1,  
+        #1e90ff, 
+        #8a2be2   
+      );
+      background-size: 400% 100%;
+      transform-origin: bottom right;
+      transition: 
+        transform 0.3s ease-in-out,
+        opacity 0.2s ease;
+      transform: scaleX(0);
+      opacity: 0;
+    }
+  
+    .underline-animation:hover::after {
+      transform: scaleX(1);
+      transform-origin: bottom left;
+      opacity: 1;
+      animation: gradientTeleport 10s linear infinite; 
+    }
+  
+    .underline-animation:hover {
+      transform: translateY(-0.4vh);
+    }
+  }
+  
+  @keyframes gradientTeleport {
+    0%, 100% {
+      background-position: 0% 0%;
+    }
+    25% {
+      background-position: 100% 0%;
+    }
+    50% {
+      background-position: 200% 0%;
+    }
+    75% {
+      background-position: 300% 0%;
+    }
+  }
+
+/* Efekt gradientu pod kursorem */
+@layer components {
+  .mouse-cursor-gradient-tracking {
+    position: relative;
+    overflow: hidden;
+    z-index: 1; 
+  }
+
+  .mouse-cursor-gradient-tracking::before {
+    --size: 0;
+    content: '';
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: var(--size);
+    height: var(--size);
+    background: radial-gradient(
+      circle closest-side,
+      #8064ff63 00%,
+      #baabff20 60%,
+      transparent 100%
+    );
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+    z-index: -1;
+  }
+  
+
+  .mouse-cursor-gradient-tracking:hover::before {
+    --size: 20vw;
+  }
+}
+
+/* Custom gradient animation */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-shift {
+  background-size: 300% 300%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Smooth button transitions */
+button {
+  transition-property: transform, box-shadow, background-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Glow effect for primary button */
+.hover\:shadow-2xl:hover {
+  box-shadow: 0 0 40px rgba(192, 132, 252, 0.4);
+}

@@ -6,5 +6,9 @@ module.exports = {
   theme: {
     extend: {},
   },
-  plugins: [],
+  plugins: [
+    require('tailwindcss-motion'),
+    require('tailwindcss-intersect')
+  ], 
+  
 }
