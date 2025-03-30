@@ -41,6 +41,38 @@ const getPieceImage = (piece: PieceSymbol | ' '): string | null => {
   return `/pawns/${color}${pieceName}.svg`;
 };
 
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
+
+const PlayerInfoBar = ({ 
+  color, 
+  username, 
+  avatar, 
+  timeLeft, 
+  isActive 
+}: { 
+  color: 'white' | 'black', 
+  username: string, 
+  avatar: string, 
+  timeLeft: number,
+  isActive: boolean
+}) => (
+  <div className={`w-full flex items-center justify-between p-2 rounded-md ${isActive ? 'bg-blue-100' : 'bg-gray-100'}`}>
+    <div className="flex items-center">
+      <div className="w-10 h-10 rounded-full overflow-hidden mr-2">
+        <img src={avatar} alt={username} className="w-full h-full object-cover" />
+      </div>
+      <span className="font-medium">{username}</span>
+    </div>
+    <div className={`text-xl font-mono font-bold ${isActive ? 'text-blue-600' : 'text-gray-600'}`}>
+      {formatTime(timeLeft)}
+    </div>
+  </div>
+);
+
 const Chessboard: React.FC<ChessboardProps> = ({
                                                  maxSize = 800,
                                                  minSize = 280,
@@ -60,9 +92,21 @@ const Chessboard: React.FC<ChessboardProps> = ({
   const [promotionSquare, setPromotionSquare] = useState<Square | null>(null);
   const [promotionFromSquare, setPromotionFromSquare] = useState<Square | null>(null);
   const PROMOTION_PIECES: PieceSymbol[] = ['q', 'r', 'b', 'n'];
+  const [playerInfo, setPlayerInfo] = useState({
+    white: { username: "Player 1", avatar: "/pawns/WhiteKing.svg" },
+    black: { username: "Player 2", avatar: "/pawns/BlackKing.svg" }
+  });
+  const [whiteTime, setWhiteTime] = useState<number>(600); 
+  const [blackTime, setBlackTime] = useState<number>(600);
+  const [activeTimer, setActiveTimer] = useState<'white' | 'black'>('white');
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [selectedTimeOption, setSelectedTimeOption] = useState<number>(600);
+  const [playerColor, setPlayerColor] = useState<'white' | 'black' | null>(null);
+  const [gameReady, setGameReady] = useState<boolean>(false);
 
   useEffect(() => {
-    const client = new WebSocketClient("Player1");
+    const randomUsername = `Player${Math.floor(Math.random() * 1000)}`;
+    const client = new WebSocketClient(randomUsername);
     setWsClient(client);
 
     interface RoomCreatedData {
@@ -91,6 +135,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         "Share this ID with your opponent to join the game."
       ]);
       console.log(`Room created: ${data.roomId}`);
+      client.sendRequestColor();
     });
 
     client.addEventListener('JOINED_ROOM', (data: JoinedRoomData) => {
@@ -100,6 +145,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         `You joined room: ${data.roomId}`
       ]);
       console.log(`Joined room: ${data.roomId}`);
+      client.sendRequestColor();
     });
 
     client.addEventListener('USER_JOINED', (data: { username: string }) => {
@@ -129,6 +175,9 @@ const Chessboard: React.FC<ChessboardProps> = ({
         setBoardState(JSON.parse(JSON.stringify(game.board)));
         setChatMessages(prev => [...prev, `${data.sender} moved: ${data.notation}`]);
         
+        // Toggle timer after opponent's move
+        setActiveTimer(game.turn === 'w' ? 'white' : 'black');
+        
         if (game.isCheckmate()) {
           setIsCheckmate(true);
           console.log("Checkmate!");
@@ -141,6 +190,48 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
     client.addEventListener('MESSAGE', (data: MessageData) => {
       setChatMessages(prev => [...prev, `${data.sender}: ${data.message}`]);
+    });
+
+    client.addEventListener('COLOR_ASSIGNED', (data: { color: 'white' | 'black' }) => {
+      setPlayerColor(data.color);
+      setChatMessages(prev => [...prev, `You are playing as ${data.color}`]);
+      const playerUsername = client.username;
+      
+      if (data.color === 'white') {
+        setPlayerInfo(prev => ({
+          ...prev,
+          white: { ...prev.white, username: playerUsername }
+        }));
+      } else {
+        setPlayerInfo(prev => ({
+          ...prev, 
+          black: { ...prev.black, username: playerUsername }
+        }));
+      }
+    });
+
+    client.addEventListener('GAME_READY', (data: { 
+      whitePlayer: string, 
+      blackPlayer: string,
+      timeInSeconds: number 
+    }) => {
+      console.log('Game ready event received:', data);
+      setGameReady(true);
+      setWhiteTime(data.timeInSeconds);
+      setBlackTime(data.timeInSeconds);
+      setActiveTimer('white');
+      
+      setPlayerInfo({
+        white: { username: data.whitePlayer, avatar: "/pawns/WhiteKing.svg" },
+        black: { username: data.blackPlayer, avatar: "/pawns/BlackKing.svg" }
+      });
+      
+      setChatMessages(prev => [...prev, 'Game is ready! White player moves first.']);
+    });
+
+    client.addEventListener('ROOM_FULL', (data: { message: string }) => {
+      setChatMessages(prev => [...prev, data.message]);
+      client.sendRequestColor(); 
     });
 
     return () => {
@@ -199,11 +290,53 @@ const Chessboard: React.FC<ChessboardProps> = ({
     };
   }, [minSize, maxSize]);
 
+  useEffect(() => {
+    if (roomId && wsClient && gameReady) { 
+      if (timerRef.current) clearInterval(timerRef.current);
+      
+      timerRef.current = setInterval(() => {
+        if (activeTimer === 'white') {
+          setWhiteTime(prev => {
+            if (prev <= 0) {
+              clearInterval(timerRef.current!);
+              setChatMessages(prev => [...prev, "White player ran out of time!"]);
+              setIsCheckmate(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        } else {
+          setBlackTime(prev => {
+            if (prev <= 0) {
+              clearInterval(timerRef.current!);
+              setChatMessages(prev => [...prev, "Black player ran out of time!"]);
+              setIsCheckmate(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [roomId, wsClient, activeTimer, gameReady]); 
+
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
 
   const handleSquareClick = (square: Square) => {
-    if (isCheckmate || !wsClient) {
+    if (isCheckmate || !wsClient || !playerColor) {
+      return;
+    }
+    
+    const isPlayerTurn = (game.turn === 'w' && playerColor === 'white') || 
+                         (game.turn === 'b' && playerColor === 'black');
+    
+    if (!isPlayerTurn) {
+      setChatMessages(prev => [...prev, "It's not your turn"]);
       return;
     }
 
@@ -235,6 +368,9 @@ const Chessboard: React.FC<ChessboardProps> = ({
         setBoardState(JSON.parse(JSON.stringify(game.board)));
         setSelectedSquare(null);
         setPossibleMoves([]);
+        
+        // Toggle timer
+        setActiveTimer(game.turn === 'w' ? 'white' : 'black');
 
         if (game.isCheckmate()) {
           setIsCheckmate(true);
@@ -290,6 +426,8 @@ const Chessboard: React.FC<ChessboardProps> = ({
       setSelectedSquare(null);
       setPossibleMoves([]);
       
+      setActiveTimer(game.turn === 'w' ? 'white' : 'black');
+      
       if (game.isCheckmate()) {
         setIsCheckmate(true);
         console.log("Checkmate!");
@@ -317,7 +455,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
   const createRoom = () => {
     if (wsClient) {
-      wsClient.createRoom();
+      wsClient.createRoom(selectedTimeOption);
     }
   };
 
@@ -338,7 +476,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
   return (
     <div className={`flex flex-col items-center p-4 w-full mx-auto ${className}`}>
       {isCheckmate && (
-        <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center text-white text-4xl font-bold">
+        <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center text-white text-4xl font-bold z-50">
           CHECKMATE!
         </div>
       )}
@@ -374,6 +512,15 @@ const Chessboard: React.FC<ChessboardProps> = ({
           </div>
         </div>
       )}
+      <div className="w-full" style={{ maxWidth: `${boardSize}px` }}>
+        <PlayerInfoBar 
+          color="black"
+          username={playerInfo.black.username}
+          avatar={playerInfo.black.avatar}
+          timeLeft={blackTime}
+          isActive={activeTimer === 'black'}
+        />
+      </div>
       <div
         ref={boardRef}
         className="relative w-full"
@@ -449,60 +596,116 @@ const Chessboard: React.FC<ChessboardProps> = ({
         </div>
       </div>
 
-      <div className="mt-4 flex justify-center space-x-4">
-        <button
-          onClick={createRoom}
-          className="px-4 py-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white"
-        >
-          Create Room
-        </button>
-        <button
-          onClick={joinRoom}
-          className="px-4 py-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white"
-        >
-          Join Room
-        </button>
-        <button
-          onClick={sendMessage}
-          className="px-4 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white"
-        >
-          Send Message
-        </button>
+      <div className="w-full" style={{ maxWidth: `${boardSize}px` }}>
+      <PlayerInfoBar 
+        color="white"
+        username={playerInfo.white.username}
+        avatar={playerInfo.white.avatar}
+        timeLeft={whiteTime}
+        isActive={activeTimer === 'white'}
+        />
       </div>
 
-      {roomId && (
-        <div className="mt-4 w-full max-w-md">
-          <div className="bg-blue-100 p-4 rounded-lg shadow-md flex items-center justify-between">
-            <div>
-              <span className="font-bold">Room ID: </span>
-              <span className="font-mono">{roomId}</span>
+      <div className="mt-4 w-full max-w-md">
+      {!roomId && (
+        <>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold mb-2">Game Time</h3>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setSelectedTimeOption(60)}
+                className={`px-4 py-2 rounded-md ${selectedTimeOption === 60 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                1 Min
+              </button>
+              <button
+                onClick={() => setSelectedTimeOption(180)}
+                className={`px-4 py-2 rounded-md ${selectedTimeOption === 180 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                3 Min
+              </button>
+              <button
+                onClick={() => setSelectedTimeOption(600)}
+                className={`px-4 py-2 rounded-md ${selectedTimeOption === 600 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                10 Min
+              </button>
             </div>
+          </div>
+          
+          <div className="flex justify-center space-x-4">
             <button
-              onClick={() => {
-                navigator.clipboard.writeText(roomId);
-                setChatMessages(prev => [...prev, "Room ID copied to clipboard!"]);
-              }}
-              className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              onClick={createRoom}
+              className="px-4 py-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white"
             >
-              Copy
+              Create Room
+            </button>
+            <button
+              onClick={joinRoom}
+              className="px-4 py-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              Join Room
             </button>
           </div>
+        </>
+      )}
+      
+      {roomId && (
+        <div className="flex justify-center">
+          <button
+            onClick={sendMessage}
+            className="px-4 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white"
+          >
+            Send Message
+          </button>
         </div>
       )}
-
+    </div>
+    
+    {/* Room ID display */}
+    {roomId && (
       <div className="mt-4 w-full max-w-md">
-        <div className="bg-gray-100 p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-bold mb-2">Chat</h3>
-          <div className="h-64 overflow-y-auto">
-            {chatMessages.map((message, index) => (
-              <div key={index} className="mb-2 text-sm">
-                {message}
-              </div>
-            ))}
+        <div className="bg-blue-100 p-4 rounded-lg shadow-md flex items-center justify-between">
+          <div>
+            <span className="font-bold">Room ID: </span>
+            <span className="font-mono">{roomId}</span>
           </div>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(roomId);
+              setChatMessages(prev => [...prev, "Room ID copied to clipboard!"]);
+            }}
+            className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+    )}
+    
+    {/* Game status */}
+    {roomId && !gameReady && (
+      <div className="mt-4 w-full max-w-md">
+        <div className="bg-yellow-100 p-4 rounded-lg shadow-md">
+          <p className="text-center">Waiting for opponent to join...</p>
+        </div>
+      </div>
+    )}
+    
+    {/* Chat section */}
+    <div className="mt-4 w-full max-w-md">
+      <div className="bg-gray-100 p-4 rounded-lg shadow-md">
+        <h3 className="text-lg font-bold mb-2">Chat</h3>
+        <div className="h-64 overflow-y-auto">
+          {chatMessages.map((message, index) => (
+            <div key={index} className="mb-2 text-sm">
+              {message}
+            </div>
+          ))}
         </div>
       </div>
     </div>
+  </div>
   );
 };
 export default Chessboard;

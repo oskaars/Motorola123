@@ -13,7 +13,15 @@ wss.on('connection', (ws) => {
       case 'CREATE_ROOM':
         const roomId = Math.random().toString(36).substring(2, 7);
         rooms[roomId] = [{ ws, username: data.username }];
-        ws.send(JSON.stringify({ type: 'ROOM_CREATED', roomId }));
+        rooms[roomId].timeInSeconds = data.timeInSeconds || 600;
+        
+        console.log(`Room ${roomId} created by ${data.username} with ${rooms[roomId].timeInSeconds} seconds`);
+        
+        ws.send(JSON.stringify({ 
+          type: 'ROOM_CREATED', 
+          roomId,
+          timeInSeconds: rooms[roomId].timeInSeconds
+        }));
         break;
       case 'JOIN_ROOM':
         if (rooms[data.roomId]) {
@@ -34,6 +42,8 @@ wss.on('connection', (ws) => {
             });
 
             if (rooms[data.roomId].length === 2) {
+              console.log(`Room ${data.roomId} is now full with 2 players`);
+
               rooms[data.roomId].forEach(client => {
                 client.ws.send(JSON.stringify({
                   type: 'ROOM_FULL',
@@ -79,6 +89,48 @@ wss.on('connection', (ws) => {
             client.ws.send(JSON.stringify({ type: 'USER_LEFT', roomId: data.roomId }));
           });
           broadcastUserList(data.roomId);
+        }
+        break;
+      case 'REQUEST_COLOR':
+        if (rooms[data.roomId]) {
+          if (!rooms[data.roomId].hasOwnProperty('whitePlayer')) {
+            const isWhite = Math.random() >= 0.5;
+            
+            rooms[data.roomId].whitePlayer = isWhite ? data.username : null;
+            rooms[data.roomId].blackPlayer = !isWhite ? data.username : null;
+            
+            ws.send(JSON.stringify({
+              type: 'COLOR_ASSIGNED',
+              color: isWhite ? 'white' : 'black'
+            }));
+            
+            console.log(`Assigned ${isWhite ? 'white' : 'black'} to ${data.username} in room ${data.roomId}`);
+          } 
+          else {
+            const isWhite = rooms[data.roomId].whitePlayer === null;
+            
+            if (isWhite) {
+              rooms[data.roomId].whitePlayer = data.username;
+            } else {
+              rooms[data.roomId].blackPlayer = data.username;
+            }
+            
+            ws.send(JSON.stringify({
+              type: 'COLOR_ASSIGNED',
+              color: isWhite ? 'white' : 'black'
+            }));
+            
+            console.log(`Assigned ${isWhite ? 'white' : 'black'} to ${data.username} in room ${data.roomId}`);
+            
+            rooms[data.roomId].forEach(client => {
+              client.ws.send(JSON.stringify({
+                type: 'GAME_READY',
+                whitePlayer: rooms[data.roomId].whitePlayer,
+                blackPlayer: rooms[data.roomId].blackPlayer,
+                timeInSeconds: rooms[data.roomId].timeInSeconds || 600
+              }));
+            });
+          }
         }
         break;
     }
