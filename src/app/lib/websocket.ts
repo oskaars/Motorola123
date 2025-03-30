@@ -1,12 +1,12 @@
-// lib/ws-client.ts
 export class WebSocketClient {
   private socket: WebSocket;
   private roomId: string | null = null;
-  private username: string;
+  public username: string; // Change to public
   private eventHandlers: { [key: string]: Function[] } = {};
 
   constructor(username: string) {
-    this.username = username;
+    this.username = username; // Now accessible from outside
+    console.log(`Creating WebSocketClient for user: ${username}`);
     this.socket = new WebSocket('ws://localhost:8080');
 
     this.socket.onopen = () => {
@@ -77,8 +77,13 @@ export class WebSocketClient {
     }
   }
 
-  createRoom() {
-    this.socket.send(JSON.stringify({ type: 'CREATE_ROOM', username: this.username }));
+  createRoom(timeInSeconds: number = 600) {
+    console.log(`Creating room with ${timeInSeconds} seconds per player`);
+    this.socket.send(JSON.stringify({
+      type: 'CREATE_ROOM',
+      username: this.username,
+      timeInSeconds: timeInSeconds
+    }));
   }
 
   joinRoom(roomId: string) {
@@ -99,12 +104,28 @@ export class WebSocketClient {
 
   sendMove(notation: string) {
     if (this.roomId) {
+      console.log(`Sending move: ${notation} to room: ${this.roomId} as player: ${this.username}`);
       this.socket.send(JSON.stringify({
         type: 'MAKE_MOVE',
         roomId: this.roomId,
         notation,
         sender: this.username
       }));
+    } else {
+      console.error("Cannot send move: Not in a room");
+    }
+  }
+
+  sendRequestColor() {
+    if (this.roomId) {
+      console.log(`Requesting color assignment for ${this.username} in room ${this.roomId}`);
+      this.socket.send(JSON.stringify({
+        type: 'REQUEST_COLOR',
+        roomId: this.roomId,
+        username: this.username
+      }));
+    } else {
+      console.error("Cannot request color: Not in a room");
     }
   }
 
