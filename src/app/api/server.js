@@ -1,4 +1,3 @@
-// server.js
 const WebSocket = require('ws');
 
 const wss = new WebSocket.Server({ port: 8080 });
@@ -23,8 +22,10 @@ wss.on('connection', (ws) => {
           } else {
             rooms[data.roomId].push({ ws, username: data.username });
             ws.send(JSON.stringify({ type: 'JOINED_ROOM', roomId: data.roomId }));
-            broadcastUserList(data.roomId);
-
+            
+            console.log(`User ${data.username} joined room ${data.roomId}`);
+            console.log(`Users in room: ${rooms[data.roomId].map(client => client.username).join(', ')}`);
+            
             rooms[data.roomId].forEach(client => {
               client.ws.send(JSON.stringify({
                 type: 'USER_JOINED',
@@ -59,12 +60,15 @@ wss.on('connection', (ws) => {
       case 'MAKE_MOVE':
         if (rooms[data.roomId]) {
           console.log(`Move made in room ${data.roomId}: ${data.notation} by ${data.sender}`);
+          
           rooms[data.roomId].forEach(client => {
-            client.ws.send(JSON.stringify({
-              type: 'OPPONENT_MOVE',
-              notation: data.notation,
-              sender: data.sender,
-            }));
+            if (client.username !== data.sender) {
+              client.ws.send(JSON.stringify({
+                type: 'OPPONENT_MOVE',
+                notation: data.notation,
+                sender: data.sender,
+              }));
+            }
           });
         }
         break;

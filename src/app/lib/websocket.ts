@@ -1,4 +1,3 @@
-// lib/ws-client.ts
 export class WebSocketClient {
   private socket: WebSocket;
   private roomId: string | null = null;
@@ -7,6 +6,7 @@ export class WebSocketClient {
 
   constructor(username: string) {
     this.username = username;
+    console.log(`Creating WebSocketClient for user: ${username}`);
     this.socket = new WebSocket('ws://localhost:8080');
 
     this.socket.onopen = () => {
@@ -99,12 +99,15 @@ export class WebSocketClient {
 
   sendMove(notation: string) {
     if (this.roomId) {
+      console.log(`Sending move: ${notation} to room: ${this.roomId} as player: ${this.username}`);
       this.socket.send(JSON.stringify({
         type: 'MAKE_MOVE',
         roomId: this.roomId,
         notation,
         sender: this.username
       }));
+    } else {
+      console.error("Cannot send move: Not in a room");
     }
   }
 

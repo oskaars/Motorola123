@@ -1,7 +1,6 @@
-// components/Chessboard.tsx
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { ChessGame, PieceSymbol, Square,  } from "@/app/utils/chess";
+import { algebraicToCoords, ChessGame, PieceSymbol, Square,  } from "@/app/utils/chess";
 import WebSocketClient from '@/app/lib/websocket';
 
 interface ChessboardProps {
@@ -57,6 +56,10 @@ const Chessboard: React.FC<ChessboardProps> = ({
   const [wsClient, setWsClient] = useState<WebSocketClient | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<string[]>([]);
+  const [showPromotion, setShowPromotion] = useState<boolean>(false);
+  const [promotionSquare, setPromotionSquare] = useState<Square | null>(null);
+  const [promotionFromSquare, setPromotionFromSquare] = useState<Square | null>(null);
+  const PROMOTION_PIECES: PieceSymbol[] = ['q', 'r', 'b', 'n'];
 
   useEffect(() => {
     const client = new WebSocketClient("Player1");
@@ -82,24 +85,57 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
     client.addEventListener('ROOM_CREATED', (data: RoomCreatedData) => {
       setRoomId(data.roomId);
+      setChatMessages(prev => [
+        ...prev, 
+        `Room created! Your room ID is: ${data.roomId}`,
+        "Share this ID with your opponent to join the game."
+      ]);
       console.log(`Room created: ${data.roomId}`);
     });
 
     client.addEventListener('JOINED_ROOM', (data: JoinedRoomData) => {
       setRoomId(data.roomId);
+      setChatMessages(prev => [
+        ...prev,
+        `You joined room: ${data.roomId}`
+      ]);
       console.log(`Joined room: ${data.roomId}`);
     });
 
+    client.addEventListener('USER_JOINED', (data: { username: string }) => {
+      setChatMessages(prev => [
+        ...prev,
+        `${data.username} joined the game!`
+      ]);
+    });
+
     client.addEventListener('OPPONENT_MOVE', (data: OpponentMoveData) => {
-      const moveResult = game.makeMove(data.notation.split(' ')[0], data.notation.split(' ')[1]);
+      console.log(`Received opponent move: ${data.notation} from ${data.sender}`);
+      
+      let moveResult;
+      
+      if (data.notation.length > 4) {
+        const from = data.notation.substring(0, 2);
+        const to = data.notation.substring(2, 4);
+        const promotionPiece = data.notation.substring(4) as PieceSymbol;
+        
+        console.log(`Opponent promoting from ${from} to ${to} as ${promotionPiece}`);
+        moveResult = game.makeMove(from, to, promotionPiece);
+      } else {
+        moveResult = game.makeMove(data.notation.substring(0, 2), data.notation.substring(2, 4));
+      }
+      
       if (moveResult) {
-        setBoardState(game.board);
+        setBoardState(JSON.parse(JSON.stringify(game.board)));
         setChatMessages(prev => [...prev, `${data.sender} moved: ${data.notation}`]);
+        
         if (game.isCheckmate()) {
           setIsCheckmate(true);
           console.log("Checkmate!");
           setChatMessages(prev => [...prev, "Checkmate!"]);
         }
+      } else {
+        console.error(`Failed to make opponent's move: ${data.notation}`);
       }
     });
 
@@ -172,9 +208,31 @@ const Chessboard: React.FC<ChessboardProps> = ({
     }
 
     if (selectedSquare) {
+      const piece = game.getPiece(selectedSquare);
+      if (piece && piece.toLowerCase() === 'p') {
+        const startCoords = algebraicToCoords(selectedSquare);
+        const endCoords = algebraicToCoords(square);
+        
+        if (startCoords && endCoords) {
+          const isPawn = piece.toLowerCase() === 'p';
+          const isLastRank = (game.turn === 'w' && endCoords[0] === 0) || 
+                            (game.turn === 'b' && endCoords[0] === 7);
+          
+          const validMoves = game.getPossibleMoves(selectedSquare, true);
+          
+          if (isPawn && isLastRank && validMoves.includes(square)) {
+            console.log("PROMOTION MOVE DETECTED!");
+            setPromotionSquare(square);
+            setPromotionFromSquare(selectedSquare);
+            setShowPromotion(true);
+            return;
+          }
+        }
+      }
+      
       const moveResult = game.makeMove(selectedSquare, square);
       if (moveResult) {
-        setBoardState(game.board);
+        setBoardState(JSON.parse(JSON.stringify(game.board)));
         setSelectedSquare(null);
         setPossibleMoves([]);
 
@@ -185,13 +243,17 @@ const Chessboard: React.FC<ChessboardProps> = ({
         }
 
         if (wsClient && roomId) {
-          wsClient.sendMove(`${selectedSquare}${square}`);
-          setChatMessages(prev => [...prev, `You moved: ${selectedSquare}${square}`]);
+          const notation = `${selectedSquare}${square}`;
+          wsClient.sendMove(notation);
+          setChatMessages(prev => [...prev, `You moved: ${notation}`]);
         }
       } else {
         const piece = game.getPiece(square);
         const currentColor = game.turn;
-        const isOwnPiece = piece !== null && piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+        const isOwnPiece = piece !== null && piece !== ' ' && 
+          ((currentColor === 'w' && piece === piece.toUpperCase()) || 
+           (currentColor === 'b' && piece === piece.toLowerCase()));
+           
         if (isOwnPiece) {
           setSelectedSquare(square);
           setPossibleMoves(game.getPossibleMoves(square, true));
@@ -209,6 +271,44 @@ const Chessboard: React.FC<ChessboardProps> = ({
         setPossibleMoves(game.getPossibleMoves(square, true));
       }
     }
+  };
+
+  const handlePromotion = (promotionPiece: PieceSymbol) => {
+    if (!promotionFromSquare || !promotionSquare) {
+      console.error("Missing promotion squares");
+      return;
+    }
+    
+    console.log(`Promoting pawn from ${promotionFromSquare} to ${promotionSquare} as ${promotionPiece}`);
+    
+    const moveResult = game.makeMove(promotionFromSquare, promotionSquare, promotionPiece);
+    
+    if (moveResult) {
+      console.log(`Promotion successful, new piece: ${game.getPiece(promotionSquare)}`);
+      
+      setBoardState([...game.board]);
+      setSelectedSquare(null);
+      setPossibleMoves([]);
+      
+      if (game.isCheckmate()) {
+        setIsCheckmate(true);
+        console.log("Checkmate!");
+        setChatMessages(prev => [...prev, "Checkmate!"]);
+      }
+      
+      if (wsClient && roomId) {
+        const moveNotation = `${promotionFromSquare}${promotionSquare}${promotionPiece}`;
+        console.log(`Sending move with promotion: ${moveNotation}`);
+        wsClient.sendMove(moveNotation);
+        setChatMessages(prev => [...prev, `You promoted to ${promotionPiece.toUpperCase()}`]);
+      }
+    } else {
+      console.error('Promotion move failed');
+    }
+    
+    setShowPromotion(false);
+    setPromotionSquare(null);
+    setPromotionFromSquare(null);
   };
 
   const isPossibleMove = (square: Square): boolean => {
@@ -240,6 +340,38 @@ const Chessboard: React.FC<ChessboardProps> = ({
       {isCheckmate && (
         <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center text-white text-4xl font-bold">
           CHECKMATE!
+        </div>
+      )}
+      {showPromotion && (
+        <div className="fixed z-50 inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-4 rounded-lg shadow-lg">
+            <h3 className="text-lg font-medium mb-2 text-center">Choose promotion piece</h3>
+            <div className="flex justify-center">
+              {PROMOTION_PIECES.map((piece) => {
+                const color = game.turn === 'w' ? 'White' : 'Black';
+                let pieceName = '';
+                switch (piece) {
+                  case 'q': pieceName = 'Queen'; break;
+                  case 'r': pieceName = 'Rook'; break;
+                  case 'b': pieceName = 'Bishop'; break;
+                  case 'n': pieceName = 'Knight'; break;
+                }
+                return (
+                  <div 
+                    key={piece}
+                    className="w-16 h-16 m-1 flex items-center justify-center cursor-pointer border border-gray-300 hover:bg-gray-100"
+                    onClick={() => handlePromotion(piece)}
+                  >
+                    <img
+                      src={`/pawns/${color}${pieceName}.svg`}
+                      alt={pieceName}
+                      className="w-12 h-12"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
       <div
@@ -338,6 +470,26 @@ const Chessboard: React.FC<ChessboardProps> = ({
         </button>
       </div>
 
+      {roomId && (
+        <div className="mt-4 w-full max-w-md">
+          <div className="bg-blue-100 p-4 rounded-lg shadow-md flex items-center justify-between">
+            <div>
+              <span className="font-bold">Room ID: </span>
+              <span className="font-mono">{roomId}</span>
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(roomId);
+                setChatMessages(prev => [...prev, "Room ID copied to clipboard!"]);
+              }}
+              className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 w-full max-w-md">
         <div className="bg-gray-100 p-4 rounded-lg shadow-md">
           <h3 className="text-lg font-bold mb-2">Chat</h3>
@@ -353,5 +505,4 @@ const Chessboard: React.FC<ChessboardProps> = ({
     </div>
   );
 };
-
 export default Chessboard;
