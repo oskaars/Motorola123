@@ -1,8 +1,8 @@
-"use client"
-import React from 'react';
-import dynamic from 'next/dynamic';
+"use client";
+import React from "react";
+import "/src/globals.css";
 import Multiplayer from "@/app/components/Multiplayer";
-
+import dynamic from "next/dynamic";
 // Dynamiczny import bez SSR
 const ChessPiece3DClient = dynamic(
   () => import('../components/threeDChessPiece'),
@@ -19,15 +19,12 @@ const ChessPiece3DClient = dynamic(
 
 const LandingPage: React.FC = () => {
   return (
-
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      <Multiplayer />
       <h1 className="text-4xl font-bold mb-8">
-        Welcome to the Chess App
+        Welcome to the Multiplayer App.
       </h1>
-      <div className="w-full max-w-lg">
-        <ChessPiece3DClient />
-      </div>
+      <Multiplayer />
+      <ChessPiece3DClient />
     </div>
   );
 };
