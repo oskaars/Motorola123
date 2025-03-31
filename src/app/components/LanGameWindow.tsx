@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import LanOptions from "./LanOptions";
+import LanOptions from "./ChooseMode/LanOptions";
 import ChessboardLan from "./ChessboardLan";
 import ThemeSettings from "./ThemeSettings";
 

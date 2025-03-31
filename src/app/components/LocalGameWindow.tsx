@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef } from "react";
-import Chessboard from "./Chessboard2";
+import Chessboard from "./Chessboard";
 import ThemeSettings from "./ThemeSettings";
 import Link from "next/link";
 
@@ -38,6 +38,10 @@ const LocalGameWindow = () => {
           <Link
             href="/play"
             className="w-full px-6 py-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-[0.3vh] border-red-500/50 rounded-lg text-red-300 font-medium text-lg transition-all duration-300 text-center"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = "/play"; //  force a page refresh
+            }}
           >
             Go Back
           </Link>

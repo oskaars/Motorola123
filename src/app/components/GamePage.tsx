@@ -1,12 +1,12 @@
 "use client";
-import ScrollIndicator from "./ScrollIndicator";
-import GameModeButtons from "./GameModeButtons";
-import GradientBackground from "./GradientBackground";
-import ScrollToTop from "./ScrollToTop";
-import CurvedSeparator from "./CurvedSeparator";
-import FeatureCards from "./FeatureCards";
-import AuthorsSection from "./AuthorsSection";
-import GradientDivider from "./GradientDivider";
+import ScrollIndicator from "./LandingPage/ScrollIndicator";
+import GameModeButtons from "./ChooseMode/GameModeButtons";
+import GradientBackground from "./Global/GradientBackground";
+import ScrollToTop from "./LandingPage/ScrollToTop";
+import CurvedSeparator from "./LandingPage/CurvedSeparator";
+import FeatureCards from "./LandingPage/FeatureCards";
+import AuthorsSection from "./LandingPage/AuthorsSection";
+import GradientDivider from "./LandingPage/GradientDivider";
 
 const GamePage: React.FC = () => {
   return (

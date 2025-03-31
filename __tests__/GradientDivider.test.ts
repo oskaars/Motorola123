@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import GradientDivider from '../src/app/components/GradientDivider';
+import GradientDivider from '../src/app/components/LandingPage/GradientDivider';
 
 describe('GradientDivider', () => {
   it('renders without crashing', () => {

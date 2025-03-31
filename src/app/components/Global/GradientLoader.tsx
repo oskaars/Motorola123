@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import GradientBackground from "./GradientBackground";
+import GradientBackground from "./Global/GradientBackground";
 
 const GradientLoader = () => {
   const [isMounted, setIsMounted] = useState(true);
