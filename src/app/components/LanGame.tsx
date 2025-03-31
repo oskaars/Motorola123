@@ -140,6 +140,16 @@ const CreateJoinOverlay: React.FC<{
             >
               Join Room
             </button>
+            <Link
+              href="/play"
+              className="z-[999] w-full px-6 py-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-[0.3vh] border-red-500/50 rounded-lg text-red-300 font-medium text-lg transition-all duration-300 text-center"
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.href = "/play"; //  force a page refresh
+              }}
+            >
+              Go Back
+            </Link>
           </div>
         )}
 
@@ -1077,7 +1087,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
             </div>
             <Link
               href="/play"
-              className="w-full px-6 py-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-[0.3vh] border-red-500/50 rounded-lg text-red-300 font-medium text-lg transition-all duration-300 text-center"
+              className="z-[999] w-full px-6 py-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-[0.3vh] border-red-500/50 rounded-lg text-red-300 font-medium text-lg transition-all duration-300 text-center"
               onClick={(e) => {
                 e.preventDefault();
                 window.location.href = "/play"; //  force a page refresh
