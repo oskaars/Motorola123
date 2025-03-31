@@ -22,7 +22,7 @@ const AuthorsSection = ({ authors }: { authors?: Author[] }) => {
     {
       name: "Mateusz",
       description: "LOREM",
-      avatar: "/avatars/placeholder.jpg",
+      avatar: "/avatars/mateusz.png",
     },
     {
       name: "Dawid",

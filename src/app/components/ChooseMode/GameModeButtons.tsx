@@ -6,7 +6,7 @@ import LanOptions from "./LanOptions";
 import ComputerOptions from "./ComputerOptions";
 import { BsFillPeopleFill } from "react-icons/bs";
 import Link from "next/link";
-import LocalGameWindow from "./LocalGameWindow";
+import LocalGameWindow from "../LocalGameWindow";
 
 const GameModeButtons: React.FC = () => {
   const [mode, setMode] = useState<string | null>(null);
