@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { ChessGame, PieceSymbol, Square } from "@/app/utils/chess";
-import WebSocketClient from '@/app/lib/websocket';
+import WebSocketClient from "@/app/lib/websocket";
 
 interface ChessboardProps {
   maxSize?: number;
@@ -9,31 +9,31 @@ interface ChessboardProps {
   className?: string;
 }
 
-const getPieceImage = (piece: PieceSymbol | ' '): string | null => {
-  if (piece === ' ') {
+const getPieceImage = (piece: PieceSymbol | " "): string | null => {
+  if (piece === " ") {
     return null;
   }
-  const color = piece === piece.toUpperCase() ? 'White' : 'Black';
+  const color = piece === piece.toUpperCase() ? "White" : "Black";
   const type = piece.toLowerCase();
-  let pieceName = '';
+  let pieceName = "";
   switch (type) {
-    case 'p':
-      pieceName = 'Pawn';
+    case "p":
+      pieceName = "Pawn";
       break;
-    case 'n':
-      pieceName = 'Knight';
+    case "n":
+      pieceName = "Knight";
       break;
-    case 'b':
-      pieceName = 'Bishop';
+    case "b":
+      pieceName = "Bishop";
       break;
-    case 'r':
-      pieceName = 'Rook';
+    case "r":
+      pieceName = "Rook";
       break;
-    case 'q':
-      pieceName = 'Queen';
+    case "q":
+      pieceName = "Queen";
       break;
-    case 'k':
-      pieceName = 'King';
+    case "k":
+      pieceName = "King";
       break;
     default:
       return null;
@@ -41,7 +41,11 @@ const getPieceImage = (piece: PieceSymbol | ' '): string | null => {
   return `/pawns/${color}${pieceName}.svg`;
 };
 
-const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800, minSize = 280,className = ""}) => {
+const Chessboard: React.FC<ChessboardProps> = ({
+  maxSize = 800,
+  minSize = 280,
+  className = "",
+}) => {
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
   const [game] = useState(() => new ChessGame());
@@ -49,25 +53,32 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800, minSize = 280,cla
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
   const [isCheckmate, setIsCheckmate] = useState<boolean>(false);
-  const [wsClient, setWsClient] = useState<WebSocketClient | null>(null);
-  const [roomId, setRoomId] = useState<string | null>(null);
 
   useEffect(() => {
     const client = new WebSocketClient("Player1");
     setWsClient(client);
 
-    client.addEventListener('ROOM_CREATED', (data: { roomId: React.SetStateAction<string | null>; }) => {
-      setRoomId(data.roomId);
-      console.log(`Room created: ${data.roomId}`);
-    });
+    client.addEventListener(
+      "ROOM_CREATED",
+      (data: { roomId: React.SetStateAction<string | null> }) => {
+        setRoomId(data.roomId);
+        console.log(`Room created: ${data.roomId}`);
+      }
+    );
 
-    client.addEventListener('JOINED_ROOM', (data: { roomId: React.SetStateAction<string | null>; }) => {
-      setRoomId(data.roomId);
-      console.log(`Joined room: ${data.roomId}`);
-    });
+    client.addEventListener(
+      "JOINED_ROOM",
+      (data: { roomId: React.SetStateAction<string | null> }) => {
+        setRoomId(data.roomId);
+        console.log(`Joined room: ${data.roomId}`);
+      }
+    );
 
-    client.addEventListener('OPPONENT_MOVE', (data: { notation: string; }) => {
-      const moveResult = game.makeMove(data.notation.split(' ')[0], data.notation.split(' ')[1]);
+    client.addEventListener("OPPONENT_MOVE", (data: { notation: string }) => {
+      const moveResult = game.makeMove(
+        data.notation.split(" ")[0],
+        data.notation.split(" ")[1]
+      );
       if (moveResult) {
         setBoardState(game.board);
         if (game.isCheckmate()) {
@@ -91,16 +102,34 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800, minSize = 280,cla
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
-        const smallerViewportDimension = Math.min(viewportWidth, viewportHeight);
+        const smallerViewportDimension = Math.min(
+          viewportWidth,
+          viewportHeight
+        );
 
         let idealSize;
 
-        if (viewportWidth < 640) { // Mobile
-          idealSize = Math.min(containerWidth * 0.95, smallerViewportDimension * 0.8, maxSize);
-        } else if (viewportWidth < 1024) { // Tablet
-          idealSize = Math.min(containerWidth * 0.85, smallerViewportDimension * 0.7, maxSize);
-        } else { // Desktop
-          idealSize = Math.min(containerWidth * 0.75, smallerViewportDimension * 0.6, maxSize);
+        if (viewportWidth < 640) {
+          // Mobile
+          idealSize = Math.min(
+            containerWidth * 0.95,
+            smallerViewportDimension * 0.8,
+            maxSize
+          );
+        } else if (viewportWidth < 1024) {
+          // Tablet
+          idealSize = Math.min(
+            containerWidth * 0.85,
+            smallerViewportDimension * 0.7,
+            maxSize
+          );
+        } else {
+          // Desktop
+          idealSize = Math.min(
+            containerWidth * 0.75,
+            smallerViewportDimension * 0.6,
+            maxSize
+          );
         }
 
         const finalSize = Math.max(Math.min(idealSize, maxSize), minSize);
@@ -114,7 +143,7 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800, minSize = 280,cla
     window.addEventListener("resize", updateSize);
     window.addEventListener("orientationchange", updateSize);
 
-    if (typeof ResizeObserver !== 'undefined') {
+    if (typeof ResizeObserver !== "undefined") {
       const observer = new ResizeObserver(updateSize);
       if (boardRef.current?.parentElement) {
         observer.observe(boardRef.current.parentElement);
@@ -159,7 +188,11 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800, minSize = 280,cla
       } else {
         const piece = game.getPiece(square);
         const currentColor = game.turn;
-        const isOwnPiece = piece !== null && piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+        const isOwnPiece =
+          piece !== null &&
+          piece !== " " &&
+          ((currentColor === "w" && piece === piece.toUpperCase()) ||
+            (currentColor === "b" && piece === piece.toLowerCase()));
         if (isOwnPiece) {
           setSelectedSquare(square);
           setPossibleMoves(game.getPossibleMoves(square, true));
@@ -171,7 +204,11 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800, minSize = 280,cla
     } else {
       const piece = game.getPiece(square);
       const currentColor = game.turn;
-      const isOwnPiece = piece !== null && piece !== ' ' && ((currentColor === 'w' && piece === piece.toUpperCase()) || (currentColor === 'b' && piece === piece.toLowerCase()));
+      const isOwnPiece =
+        piece !== null &&
+        piece !== " " &&
+        ((currentColor === "w" && piece === piece.toUpperCase()) ||
+          (currentColor === "b" && piece === piece.toLowerCase()));
       if (isOwnPiece) {
         setSelectedSquare(square);
         setPossibleMoves(game.getPossibleMoves(square, true));
@@ -190,14 +227,16 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800, minSize = 280,cla
   };
 
   const joinRoom = () => {
-    const roomId = prompt('Enter room ID:');
+    const roomId = prompt("Enter room ID:");
     if (roomId && wsClient) {
       wsClient.joinRoom(roomId);
     }
   };
 
   return (
-    <div className={`flex flex-col items-center p-4 w-full mx-auto ${className}`}>
+    <div
+      className={`flex flex-col items-center p-4 w-full mx-auto ${className}`}
+    >
       {isCheckmate && (
         <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center text-white text-4xl font-bold">
           CHECKMATE!
@@ -238,7 +277,11 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800, minSize = 280,cla
                           <div
                             key={square}
                             className={`w-full h-full flex items-center justify-center cursor-pointer
-                              ${(rowIndex + colIndex) % 2 === 0 ? "bg-[#f0d9b5]" : "bg-[#b58863]"}
+                              ${
+                                (rowIndex + colIndex) % 2 === 0
+                                  ? "bg-[#f0d9b5]"
+                                  : "bg-[#b58863]"
+                              }
                               ${isSelected ? "bg-yellow-300" : ""}
                               ${isMoveableTo ? "bg-green-300" : ""}
                               ${isCheckmate ? "bg-red-300" : ""}
