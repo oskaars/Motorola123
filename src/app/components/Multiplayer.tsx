@@ -72,7 +72,8 @@ const PlayerInfoBar = ({
   </div>
 );
 
-const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800,minSize = 280,className = ""}) => {
+const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800,minSize = 280,className = ""
+                                               }) => {
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
   const [game, setGame] = useState(() => new ChessGame());
@@ -515,6 +516,7 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800,minSize = 280,clas
 
   return (
     <div className={`flex flex-col items-center p-4 w-full mx-auto ${className}`}>
+       <PlayerTeamBadge playerColor={playerColor} />
       {!socketConnected && (
         <div className="mt-4 p-2 bg-yellow-100 rounded text-center">
           Connecting to server...
@@ -712,6 +714,7 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800,minSize = 280,clas
         </div>
       )}
     </div>
+    
 
     {roomId && (
       <div className="mt-4 w-full max-w-md">
@@ -753,7 +756,35 @@ const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800,minSize = 280,clas
         </div>
       </div>
     </div>
+    {roomId && playerColor && (
+      <div className="mt-4 w-full max-w-md">
+        <div className={`p-4 rounded-lg shadow-md text-center font-bold ${
+          playerColor === 'white' ? 'bg-gray-100' : 'bg-gray-800 text-white'
+        }`}>
+          You are playing as {playerColor === 'white' ? '☀️ White' : '🌙 Black'}
+          {gameReady && (
+            <div className="mt-2 text-sm font-normal">
+              {activeTimer === playerColor 
+                ? "It's your turn to move" 
+                : "Waiting for opponent's move"}
+            </div>
+          )}
+        </div>
+      </div>
+    )}
   </div>
   );
 };
+
+const PlayerTeamBadge = ({ playerColor }: { playerColor: 'white' | 'black' | null }) => {
+  if (!playerColor) return null;
+  
+  return (
+    <div className="fixed top-4 right-4 z-50 bg-white shadow-md rounded-lg p-3 flex items-center space-x-2">
+      <div className={`w-6 h-6 rounded-full ${playerColor === 'white' ? 'bg-white border border-gray-300' : 'bg-black'}`}></div>
+      <span className="font-medium">You are playing as {playerColor}</span>
+    </div>
+  );
+};
+
 export default Chessboard;
