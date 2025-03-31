@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef } from "react";
-import Chessboard from "./Chessboard";
+import Chessboard from "./Chessboard2";
 import ThemeSettings from "./ThemeSettings";
 import Link from "next/link";
 

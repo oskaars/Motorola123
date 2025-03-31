@@ -2,7 +2,7 @@
 import React from "react";
 import "/src/globals.css";
 import Multiplayer from "@/app/components/Multiplayer";
-import Chessboard from "@/app/components/Chessboard";
+import Chessboard from "@/app/components/Chessboard2";
 
 const LandingPage: React.FC = () => {
   return (
