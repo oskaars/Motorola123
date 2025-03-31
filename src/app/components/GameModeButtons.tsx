@@ -6,16 +6,16 @@ import LanOptions from "./LanOptions";
 import ComputerOptions from "./ComputerOptions";
 import { BsFillPeopleFill } from "react-icons/bs";
 import Link from "next/link";
-import GameWindow from "./LocalGameWindow";
+import LocalGameWindow from "./LocalGameWindow";
 
 const GameModeButtons: React.FC = () => {
   const [mode, setMode] = useState<string | null>(null);
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center">
+    <div className="w-full min-h-screen flex flex-col items-center mb-[10vh]">
       {mode !== "Local" && (
         <>
-          <div className="w-[80vw] lg:w-full max-w-[1200px] mb-[4vh] flex justify-start pt-[8vh] pb-[4vh]">
+          <div className="w-[90vw] lg:w-[70vw] mb-[4vh] flex justify-start pt-[8vh] pb-[4vh]">
             <Link
               href="/"
               className="text-[2.5vh] text-gray-300 hover:text-purple-400 transition-all"
@@ -98,7 +98,9 @@ const GameModeButtons: React.FC = () => {
             {mode === "Computer" && (
               <ComputerOptions onBack={() => setMode(null)} />
             )}
-            {mode === "Local" && <GameWindow onBack={() => setMode(null)} />}
+            {mode === "Local" && (
+              <LocalGameWindow onBack={() => setMode(null)} />
+            )}
           </>
         )}
       </div>

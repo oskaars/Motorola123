@@ -191,3 +191,20 @@ button {
 .shadow-glow {
   filter: drop-shadow(0 0 8px currentColor);
 }
+
+#a1 {
+  border-bottom-left-radius: 1vh;
+}
+
+#a8 {
+  border-top-left-radius: 1vh;
+}
+
+#h8 {
+  border-top-right-radius: 1vh;
+
+}
+
+#h1 {
+  border-bottom-right-radius: 1vh;
+}

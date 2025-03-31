@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTheme } from "@/context/ThemeContext";
 
 const ThemeSettings = () => {
@@ -7,49 +7,38 @@ const ThemeSettings = () => {
     lightColor,
     darkColor,
     highlightColor,
+    PossibleMoveColor,
     setLightColor,
     setDarkColor,
     setHighlightColor,
+    setPossibleMoveColor,
+    resetColors,
   } = useTheme();
   const [showColorMenu, setShowColorMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const ColorPickerItem = ({
-    label,
-    color,
-    onChange,
-  }: {
-    label: string;
-    color: string;
-    onChange: (color: string) => void;
-  }) => (
-    <div className="flex items-center gap-4 p-3 rounded-xl border border-[#5c085a] bg-gray-900/50 backdrop-blur-sm mb-3 z-[99]">
-      <span className="text-sm font-medium bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-        {label}
-      </span>
-      <div className="relative flex-1 flex justify-end">
-        <button
-          onClick={() => document.getElementById(`${label}-input`)?.click()}
-          className="h-8 w-8 rounded-lg border-2 border-purple-400 shadow-glow shadow-purple-500/30 cursor-pointer transition-all hover:scale-110"
-          style={{ backgroundColor: color }}
-          aria-label={`Choose ${label} color`}
-        >
-          <input
-            id={`${label}-input`}
-            type="color"
-            value={color}
-            onChange={(e) => onChange(e.target.value)}
-            className="absolute opacity-0 w-0 h-0"
-          />
-        </button>
-      </div>
-    </div>
-  );
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowColorMenu(false);
+      }
+    };
+
+    if (showColorMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showColorMenu]);
 
   return (
-    <div className="mt-4 relative">
+    <div className=" relative" ref={menuRef}>
       <button
         onClick={() => setShowColorMenu(!showColorMenu)}
-        className="px-6 py-3 bg-gray-900/50 border-2 border-[#5c085a] rounded-xl shadow-glow shadow-purple-500/20 hover:border-pink-500 transition-all text-sm font-medium text-purple-300 flex items-center gap-2 backdrop-blur-sm"
+        className="px-[3vw] py-3 bg-gray-900/50 border-2 border-[#5c085a] rounded-xl shadow-glow shadow-purple-500/20 hover:border-pink-500 transition-all text-sm font-medium text-purple-300 flex items-center gap-2 backdrop-blur-sm"
       >
         <svg
           className="w-5 h-5 text-pink-400"
@@ -72,23 +61,95 @@ const ThemeSettings = () => {
           <h3 className="text-base font-bold mb-4 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
             Board Customization
           </h3>
-          <div className="space-y-3">
-            <ColorPickerItem
-              label="Light Squares"
-              color={lightColor}
-              onChange={setLightColor}
-            />
-            <ColorPickerItem
-              label="Dark Squares"
-              color={darkColor}
-              onChange={setDarkColor}
-            />
-            <ColorPickerItem
-              label="Highlight Color"
-              color={highlightColor}
-              onChange={setHighlightColor}
-            />
+          <div className="flex flex-col gap-[3vh]">
+            <div className="grid grid-cols-[3fr_1fr] gap-4 items-center">
+              <label className="block text-sm font-medium">Light Squares</label>
+              <div className="relative w-full h-10">
+                <div
+                  className="w-full h-full rounded-md"
+                  style={{ backgroundColor: lightColor }}
+                ></div>
+                <input
+                  type="color"
+                  value={lightColor}
+                  onChange={(e) => setLightColor(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-md"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-[3fr_1fr] gap-4 items-center">
+              <label className="block text-sm font-medium">Dark Squares</label>
+              <div className="relative w-full h-10">
+                <div
+                  className="w-full h-full rounded-md"
+                  style={{ backgroundColor: darkColor }}
+                ></div>
+                <input
+                  type="color"
+                  value={darkColor}
+                  onChange={(e) => setDarkColor(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-md"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-[3fr_1fr] gap-4 items-center">
+              <label className="block text-sm font-medium">
+                Highlight Color
+              </label>
+              <div className="relative w-full h-10">
+                <div
+                  className="w-full h-full rounded-md"
+                  style={{ backgroundColor: highlightColor }}
+                ></div>
+                <input
+                  type="color"
+                  value={highlightColor}
+                  onChange={(e) => setHighlightColor(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-md"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-[3fr_1fr] gap-4 items-center">
+              <label className="block text-sm font-medium">
+                Possible Move Color
+              </label>
+              <div className="relative w-full h-10">
+                <div
+                  className="w-full h-full rounded-md"
+                  style={{ backgroundColor: PossibleMoveColor }}
+                ></div>
+                <input
+                  type="color"
+                  value={PossibleMoveColor}
+                  onChange={(e) => setPossibleMoveColor(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-md"
+                />
+              </div>
+            </div>
           </div>
+
+          <button
+            onClick={() => {
+              resetColors();
+              setShowColorMenu(false);
+            }}
+            className="mt-4 w-full py-2 bg-gray-800/50 border border-[#5c085a]/50 rounded-lg text-purple-300 hover:bg-gray-700/50 transition-colors flex items-center justify-center gap-2"
+          >
+            <svg
+              className="w-5 h-5 text-pink-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Reset to Default Colors
+          </button>
         </div>
       )}
     </div>
