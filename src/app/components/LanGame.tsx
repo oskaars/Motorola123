@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import ThemeSettings from "./ThemeSettings";
 import {
   algebraicToCoords,
   ChessGame,
@@ -8,6 +9,8 @@ import {
   validateFen,
 } from "@/app/utils/chess";
 import { WebSocketClient } from "@/app/lib/websocket";
+import Link from "next/link";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ChessboardProps {
   maxSize?: number;
@@ -224,6 +227,9 @@ const Chessboard: React.FC<ChessboardProps> = ({
   minSize = 280,
   className = "",
 }) => {
+  const { lightColor, darkColor, highlightColor, PossibleMoveColor } =
+    useTheme();
+
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
   const [game, setGame] = useState(() => new ChessGame());
@@ -900,18 +906,15 @@ const Chessboard: React.FC<ChessboardProps> = ({
                                   style={{
                                     backgroundColor:
                                       (rowIndex + colIndex) % 2 === 0
-                                        ? "#f0d9b5"
-                                        : "#b58863",
+                                        ? lightColor
+                                        : darkColor,
                                     ...(isSelected && {
-                                      boxShadow:
-                                        "0 0 15px 2px rgba(255, 255, 0, 0.5)",
-                                      border:
-                                        "2px solid rgba(255, 255, 0, 0.5)",
+                                      boxShadow: `0 0 15px 2px ${highlightColor}`,
+                                      border: `2px solid ${highlightColor}`,
                                       transform: "scale(1.02)",
                                     }),
                                     ...(isMoveableTo && {
-                                      backgroundColor:
-                                        "rgba(106, 190, 106, 0.6)",
+                                      backgroundColor: PossibleMoveColor,
                                     }),
                                   }}
                                   data-square={square}
@@ -971,6 +974,9 @@ const Chessboard: React.FC<ChessboardProps> = ({
         </div>
         <div className="w-full lg:w-[40vw] h-full mt-[2vh] flex justify-center items-start">
           <div className="py-[2vh] flex flex-col justify-center items-center w-full h-full bg-black/20 rounded-xl px-4 shadow-xl border-[0.4vh] border-[#5c085a]/50 backdrop-blur-sm">
+            <div className="w-full flex flex-row px-[3vh]">
+              <ThemeSettings />
+            </div>
             {roomId && playerColor && (
               <div className="mt-4 w-full max-w-md">
                 <div
@@ -1017,7 +1023,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
             )}
             {roomId && !gameReady && (
               <div className="mt-4 w-full max-w-md">
-                <div className="bg-yellow-100 p-4 rounded-lg shadow-md">
+                <div className="px-3 py-[1.5vh] bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-300 text-[2vh] transition-all duration-300">
                   <p className="text-center">Waiting for opponent to join...</p>
                 </div>
               </div>
@@ -1069,6 +1075,16 @@ const Chessboard: React.FC<ChessboardProps> = ({
                 </div>
               </div>
             </div>
+            <Link
+              href="/play"
+              className="w-full px-6 py-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-[0.3vh] border-red-500/50 rounded-lg text-red-300 font-medium text-lg transition-all duration-300 text-center"
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.href = "/play"; //  force a page refresh
+              }}
+            >
+              Go Back
+            </Link>
 
             <style jsx>{`
               @keyframes fadeIn {
