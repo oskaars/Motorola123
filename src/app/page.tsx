@@ -21,12 +21,9 @@ export default function Home() {
         <div
           onMouseEnter={() => setIsHoveringNavbar(true)}
           onMouseLeave={() => setIsHoveringNavbar(false)}
-        >
-          <NavBar />
-        </div>
+        ></div>
         <LandingPage />
         {!isHoveringNavbar && <CursorTrail />}
-        <CustomFooter />
       </ObserverProvider>
     </>
   );

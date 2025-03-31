@@ -15,8 +15,7 @@ const LandingPage: React.FC = () => {
       <ScrollIndicator />
       <LandingPageButtons />
       <CurvedSeparator />
-      <GradientBackground />
-      <ScrollToTop />
+
       <FeatureCards />
       <GradientDivider />
       <AuthorsSection />

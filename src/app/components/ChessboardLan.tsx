@@ -1,273 +1,604 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { useTheme } from "@/app/hooks/useTheme";
-import { Chess, Square } from "chess.js";
-import useWebSocket from "@/app/hooks/useWebSocket";
+import { ChessGame, PieceSymbol, Square } from "@/app/utils/chess";
+import WebSocketClient from "@/app/lib/websocket";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ChessboardLanProps {
   maxSize?: number;
   minSize?: number;
   className?: string;
+  wsClient: WebSocketClient | null;
   roomId: string | null;
   onBack: () => void;
 }
 
-interface PlayerInfo {
+const getPieceImage = (piece: PieceSymbol | " "): string | null => {
+  if (piece === " ") return null;
+  const color = piece === piece.toUpperCase() ? "White" : "Black";
+  const type = piece.toLowerCase();
+  let pieceName = "";
+  switch (type) {
+    case "p":
+      pieceName = "Pawn";
+      break;
+    case "n":
+      pieceName = "Knight";
+      break;
+    case "b":
+      pieceName = "Bishop";
+      break;
+    case "r":
+      pieceName = "Rook";
+      break;
+    case "q":
+      pieceName = "Queen";
+      break;
+    case "k":
+      pieceName = "King";
+      break;
+    default:
+      return null;
+  }
+  return `/pawns/${color}${pieceName}.svg`;
+};
+
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+};
+
+interface PlayerInfoBarProps {
+  color: "white" | "black";
   username: string;
   avatar: string;
-  color: "white" | "black";
+  timeLeft: number;
+  isActive: boolean;
+  capturedPieces: string[];
 }
+
+const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
+  color,
+  username,
+  avatar,
+  timeLeft,
+  isActive,
+  capturedPieces,
+}) => (
+  <div
+    className={`w-full flex items-center justify-between p-[1.5vh] rounded-[1vh] transition-all duration-300 ${
+      isActive
+        ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-[0.3vh] border-purple-500/50"
+        : "bg-gray-900/50 border-[0.3vh] border-gray-700/50"
+    }`}
+  >
+    <div className="flex items-center gap-[2vh]">
+      <img src={avatar} alt={`${color} player`} className="w-[4vh] h-[4vh]" />
+      <span
+        className={`font-medium text-[2.2vh] ${
+          color === "white" ? "text-purple-300" : "text-pink-300"
+        }`}
+      >
+        {username}
+      </span>
+      <div className="flex gap-[0.5vh] items-center ml-[2vh]">
+        {capturedPieces.map((piece, index) => (
+          <img
+            key={index}
+            src={getPieceImage(piece as PieceSymbol)}
+            alt={piece}
+            className="w-[2.8vh] h-[2.8vh] opacity-75"
+          />
+        ))}
+      </div>
+    </div>
+    <div
+      className={`text-[2.5vh] font-mono font-bold ${
+        isActive ? "text-purple-300" : "text-gray-400"
+      }`}
+    >
+      {formatTime(timeLeft)}
+    </div>
+  </div>
+);
+
+const TimerSelectionOverlay: React.FC<{
+  onSelect: (time: number) => void;
+}> = ({ onSelect }) => {
+  const [customMinutes, setCustomMinutes] = useState<string>("");
+  const options: { label: string; seconds: number }[] = [
+    { label: "1 Min", seconds: 60 },
+    { label: "3 Min", seconds: 180 },
+    { label: "10 Min", seconds: 600 },
+    { label: "1 Hour", seconds: 3600 },
+  ];
+
+  const handleCustomTimeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const minutes = parseInt(customMinutes);
+    if (!isNaN(minutes) && minutes > 0 && minutes <= 180) {
+      onSelect(minutes * 60);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-black/80 rounded-lg p-6 shadow-lg w-80 border-pink-500/50 border-[0.4vh]">
+        <h2 className="text-xl font-bold mb-4 text-center text-pink-300">
+          Select Game Timer
+        </h2>
+        <div className="flex flex-col space-y-3">
+          {options.map((opt) => (
+            <button
+              key={opt.seconds}
+              onClick={() => onSelect(opt.seconds)}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              {opt.label}
+            </button>
+          ))}
+          <div className="relative mt-4 pt-4 border-t border-gray-600">
+            <form onSubmit={handleCustomTimeSubmit} className="flex gap-2">
+              <input
+                type="number"
+                value={customMinutes}
+                onChange={(e) => setCustomMinutes(e.target.value)}
+                placeholder="Custom minutes"
+                min="1"
+                max="180"
+                className="flex-1 px-3 py-2 bg-gray-800 text-white rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
+              >
+                Set
+              </button>
+            </form>
+            <p className="text-xs text-gray-400 mt-1">Enter minutes (1-180)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ChessboardLan: React.FC<ChessboardLanProps> = ({
   maxSize = 800,
   minSize = 280,
   className = "",
+  wsClient,
   roomId,
   onBack,
 }) => {
-  const { lightColor, darkColor, highlightColor } = useTheme();
-  const [boardState, setBoardState] = useState<string[][]>([]);
+  const [boardSize, setBoardSize] = useState<number>(0);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const game = useRef(new ChessGame());
+  const [boardState, setBoardState] = useState(game.current.board);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
-  const [isCheckmate, setIsCheckmate] = useState(false);
-  const [selectedTimeOption, setSelectedTimeOption] = useState<number | null>(
+  const [isCheckmate, setIsCheckmate] = useState<boolean>(false);
+  const { lightColor, darkColor, highlightColor, PossibleMoveColor } =
+    useTheme();
+
+  // Timer states
+  const [whiteTime, setWhiteTime] = useState<number>(0);
+  const [blackTime, setBlackTime] = useState<number>(0);
+  const [activeTimer, setActiveTimer] = useState<"white" | "black" | null>(
     null
   );
-  const [whiteTime, setWhiteTime] = useState(0);
-  const [blackTime, setBlackTime] = useState(0);
-  const [activeTimer, setActiveTimer] = useState<"white" | "black" | null>(
+  const [selectedTimeOption, setSelectedTimeOption] = useState<number | null>(
     null
   );
   const [timeOutWinner, setTimeOutWinner] = useState<"white" | "black" | null>(
     null
   );
-  const [messages, setMessages] = useState<{ sender: string; text: string }[]>(
-    []
-  );
-  const [messageInput, setMessageInput] = useState("");
-  const [roomInfo, setRoomInfo] = useState<{
-    id: string;
-    players: PlayerInfo[];
-  } | null>(null);
-  const game = useRef(new Chess());
-  const boardRef = useRef<HTMLDivElement>(null);
-  const [boardSize, setBoardSize] = useState(0);
 
-  const wsClient = useWebSocket(roomId || "");
+  // Captured pieces state
+  const [capturedPieces, setCapturedPieces] = useState<{
+    white: string[];
+    black: string[];
+  }>({
+    white: [],
+    black: [],
+  });
 
   useEffect(() => {
-    if (boardRef.current) {
-      const width = boardRef.current.offsetWidth;
-      const height = boardRef.current.offsetHeight;
-      const size = Math.min(width, height, maxSize);
-      setBoardSize(Math.max(size, minSize));
+    if (selectedTimeOption !== null) {
+      setWhiteTime(selectedTimeOption);
+      setBlackTime(selectedTimeOption);
     }
-    setBoardState(game.current.board());
-  }, [maxSize, minSize]);
+  }, [selectedTimeOption]);
 
+  // Player info (could be updated via context or props)
+  const [playerInfo, setPlayerInfo] = useState({
+    white: { username: "White", avatar: "/pawns/WhiteKing.svg" },
+    black: { username: "Black", avatar: "/pawns/BlackKing.svg" },
+  });
+
+  // Files and ranks for board coordinates
+  const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
+  const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
+
+  // Setup websocket and event listeners
   useEffect(() => {
-    if (wsClient) {
-      wsClient.onMessage((message) => {
-        if (message.type === "move") {
-          game.current.move(message.move);
-          setBoardState(game.current.board());
-        } else if (message.type === "chat") {
-          setMessages((prev) => [
-            ...prev,
-            { sender: message.sender, text: message.text },
-          ]);
-        }
-      });
-    }
+    if (!wsClient) return;
+
+    wsClient.addEventListener(
+      "GAME_START",
+      (data: { color: "white" | "black"; opponent: string }) => {
+        setPlayerInfo((prev) => ({
+          ...prev,
+          white: {
+            username: data.color === "white" ? "You" : data.opponent,
+            avatar: "/pawns/WhiteKing.svg",
+          },
+          black: {
+            username: data.color === "black" ? "You" : data.opponent,
+            avatar: "/pawns/BlackKing.svg",
+          },
+        }));
+      }
+    );
+
+    wsClient.addEventListener("OPPONENT_MOVE", (data: { notation: string }) => {
+      const [from, to] = data.notation.split(" ");
+      const moveResult = game.current.makeMove(from as Square, to as Square);
+      if (moveResult) {
+        setBoardState([...game.current.board]);
+        setActiveTimer(game.current.turn === "w" ? "white" : "black");
+      }
+    });
+
+    return () => {
+      wsClient.removeAllEventListeners();
+    };
   }, [wsClient]);
 
+  // Board resizing logic
+  useEffect(() => {
+    const updateSize = () => {
+      if (boardRef.current) {
+        const container = boardRef.current.parentElement;
+        const containerWidth = container ? container.clientWidth : 0;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const smallerViewport = Math.min(viewportWidth, viewportHeight);
+        let idealSize: number;
+
+        if (viewportWidth < 640) {
+          idealSize = Math.min(
+            containerWidth * 0.98,
+            smallerViewport * 0.85,
+            maxSize
+          );
+        } else if (viewportWidth < 1024) {
+          idealSize = Math.min(
+            containerWidth * 0.9,
+            smallerViewport * 0.75,
+            maxSize
+          );
+        } else {
+          idealSize = Math.min(
+            containerWidth * 0.9,
+            smallerViewport * 0.8,
+            maxSize
+          );
+        }
+        const finalSize = Math.max(Math.min(idealSize, maxSize), minSize);
+        setBoardSize(finalSize);
+      }
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    window.addEventListener("orientationchange", updateSize);
+    if (
+      typeof ResizeObserver !== "undefined" &&
+      boardRef.current?.parentElement
+    ) {
+      const observer = new ResizeObserver(updateSize);
+      observer.observe(boardRef.current.parentElement);
+      return () => {
+        observer.disconnect();
+        window.removeEventListener("resize", updateSize);
+        window.removeEventListener("orientationchange", updateSize);
+      };
+    }
+    return () => {
+      window.removeEventListener("resize", updateSize);
+      window.removeEventListener("orientationchange", updateSize);
+    };
+  }, [minSize, maxSize]);
+
+  // Timer update effect (runs only if game is ready and timer has been selected)
+  useEffect(() => {
+    if (selectedTimeOption !== null && activeTimer && !isCheckmate) {
+      const timer = setInterval(() => {
+        if (activeTimer === "white") {
+          setWhiteTime((prev) => {
+            if (prev <= 1) {
+              setTimeOutWinner("black");
+              setIsCheckmate(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        } else {
+          setBlackTime((prev) => {
+            if (prev <= 1) {
+              setTimeOutWinner("white");
+              setIsCheckmate(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [activeTimer, selectedTimeOption, isCheckmate]);
+
+  // Square click handler
   const handleSquareClick = (square: Square) => {
     if (isCheckmate || !wsClient) return;
 
     if (selectedSquare) {
-      const moveResult = game.current.move({
-        from: selectedSquare,
-        to: square,
-        promotion: "q",
-      });
+      const targetPiece = game.current.getPiece(square);
+      const moveResult = game.current.makeMove(selectedSquare, square);
 
       if (moveResult) {
-        setBoardState(game.current.board());
+        if (targetPiece && targetPiece !== " ") {
+          const isWhitePiece = targetPiece === targetPiece.toUpperCase();
+          setCapturedPieces((prev) => ({
+            ...prev,
+            [isWhitePiece ? "black" : "white"]: [
+              ...prev[isWhitePiece ? "black" : "white"],
+              targetPiece,
+            ],
+          }));
+        }
+
+        setBoardState(game.current.board);
         setSelectedSquare(null);
         setPossibleMoves([]);
 
-        if (!activeTimer && game.current.turn() === "b") {
+        if (activeTimer === null && game.current.turn === "b") {
           setActiveTimer("black");
         } else {
-          setActiveTimer(game.current.turn() === "w" ? "white" : "black");
+          setActiveTimer(game.current.turn === "w" ? "white" : "black");
         }
 
         if (game.current.isCheckmate()) {
           setIsCheckmate(true);
+          console.log("Checkmate!");
         }
 
-        wsClient.sendMove(`${selectedSquare} ${square}`);
+        if (wsClient && roomId) {
+          wsClient.sendMove(`${selectedSquare} ${square}`);
+        }
+      } else {
+        const piece = game.current.getPiece(square);
+        const currentColor = game.current.turn;
+        const isOwnPiece =
+          piece !== null &&
+          piece !== " " &&
+          ((currentColor === "w" && piece === piece.toUpperCase()) ||
+            (currentColor === "b" && piece === piece.toLowerCase()));
+        if (isOwnPiece) {
+          setSelectedSquare(square);
+          setPossibleMoves(game.current.getPossibleMoves(square, true));
+        } else {
+          setSelectedSquare(null);
+          setPossibleMoves([]);
+        }
       }
     } else {
-      const piece = game.current.get(square);
-      if (piece && piece.color === game.current.turn()) {
+      const piece = game.current.getPiece(square);
+      const currentColor = game.current.turn;
+      const isOwnPiece =
+        piece !== null &&
+        piece !== " " &&
+        ((currentColor === "w" && piece === piece.toUpperCase()) ||
+          (currentColor === "b" && piece === piece.toLowerCase()));
+      if (isOwnPiece) {
         setSelectedSquare(square);
-        setPossibleMoves(
-          game.current
-            .moves({ square, verbose: true })
-            .map((move) => move.to as Square)
-        );
+        setPossibleMoves(game.current.getPossibleMoves(square, true));
       }
     }
   };
 
-  const sendMessage = () => {
-    if (messageInput.trim() && wsClient) {
-      wsClient.sendMessage(messageInput);
-      setMessageInput("");
-    }
+  const isPossibleMove = (square: Square): boolean => {
+    return possibleMoves.includes(square);
+  };
+
+  const resetGame = () => {
+    const newGame = new ChessGame();
+    setBoardState(newGame.board);
+    setSelectedSquare(null);
+    setPossibleMoves([]);
+    setIsCheckmate(false);
+    setTimeOutWinner(null);
+    setActiveTimer(null);
+    setSelectedTimeOption(null);
+    setWhiteTime(0);
+    setBlackTime(0);
+    setCapturedPieces({ white: [], black: [] });
+    game.current = newGame;
   };
 
   return (
-    <div className="flex flex-col lg:flex-row w-full h-full gap-4">
-      <div className="flex-1 relative">
-        {/* Checkmate Overlay */}
-        {isCheckmate && (
-          <div
-            className="absolute inset-0 bg-red-500/75 rounded-[1vh] flex flex-col items-center justify-center text-white z-50 opacity-0 transition-all duration-1000"
-            style={{
-              animation: "fadeIn 1s ease-out forwards",
-            }}
-          >
-            <img
-              src={`/pawns/${
-                timeOutWinner
-                  ? timeOutWinner.charAt(0).toUpperCase() +
-                    timeOutWinner.slice(1)
-                  : game.current.turn() === "w"
-                  ? "Black"
-                  : "White"
-              }King.svg`}
-              alt="King"
-              className="w-16 h-16 mb-4 opacity-0"
-              style={{
-                animation: "slideDown 1s ease-out forwards",
-                animationDelay: "0.3s",
-              }}
-            />
-            <div
-              className="text-4xl font-bold opacity-0"
-              style={{
-                animation: "slideDown 1s ease-out forwards",
-                animationDelay: "0.5s",
-              }}
-            >
-              {timeOutWinner ? "TIME'S UP!" : "CHECKMATE!"}
-            </div>
-            <div
-              className="text-2xl mt-2 opacity-0"
-              style={{
-                animation: "slideDown 1s ease-out forwards",
-                animationDelay: "0.8s",
-              }}
-            >
-              {timeOutWinner
-                ? `${
-                    timeOutWinner.charAt(0).toUpperCase() +
-                    timeOutWinner.slice(1)
-                  } Wins!`
-                : `${game.current.turn() === "w" ? "Black" : "White"} Wins!`}
-            </div>
-          </div>
-        )}
+    <>
+      {selectedTimeOption === null && (
+        <TimerSelectionOverlay
+          onSelect={(time) => setSelectedTimeOption(time)}
+        />
+      )}
 
-        {/* Chessboard */}
+      <div
+        className={`flex flex-col items-center p-4 w-full mx-auto ${className}`}
+      >
+        <div className="w-full mb-[1vh]" style={{ maxWidth: `${boardSize}px` }}>
+          <PlayerInfoBar
+            color="black"
+            username={playerInfo.black.username}
+            avatar={playerInfo.black.avatar}
+            timeLeft={blackTime}
+            isActive={activeTimer === "black"}
+            capturedPieces={capturedPieces.black}
+          />
+        </div>
+
         <div
           ref={boardRef}
-          className="w-full aspect-square"
+          className="relative w-[90%]"
           style={{ maxWidth: `${boardSize}px` }}
         >
-          <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
-            {boardState.map((row, rowIndex) =>
-              row.map((piece, colIndex) => {
-                const square = `${String.fromCharCode(97 + colIndex)}${
-                  8 - rowIndex
-                }` as Square;
-                const isSelected = square === selectedSquare;
-                const isPossibleMove = possibleMoves.includes(square);
+          <div className="relative w-full pb-[100%]">
+            <div className="absolute top-0 left-0 w-full h-full flex flex-col">
+              <div className="flex flex-1">
+                <div className="flex flex-col justify-around pr-2 text-gray-600 font-medium">
+                  {ranks.map((rank) => (
+                    <div
+                      key={rank}
+                      className="flex items-center justify-center h-[12.5%] w-5 sm:w-6 md:w-8 text-sm sm:text-base md:text-lg"
+                    >
+                      {rank}
+                    </div>
+                  ))}
+                </div>
 
-                return (
-                  <div
-                    key={square}
-                    className={`w-full h-full flex items-center justify-center cursor-pointer transition-all duration-300`}
-                    style={{
-                      backgroundColor:
-                        (rowIndex + colIndex) % 2 === 0
-                          ? lightColor
-                          : darkColor,
-                      ...(isSelected && {
-                        boxShadow: `0 0 15px 2px ${highlightColor}`,
-                        transform: "scale(1.02)",
-                      }),
-                      ...(isPossibleMove && {
-                        backgroundColor: "#4CAF50",
-                      }),
-                    }}
-                    onClick={() => handleSquareClick(square)}
-                  >
-                    {piece && (
+                <div className="flex-1 relative">
+                  {isCheckmate && (
+                    <div
+                      className="absolute inset-0 bg-red-500/75 rounded-[1vh] flex flex-col items-center justify-center text-white z-50 opacity-0 transition-all duration-1000"
+                      style={{ animation: "fadeIn 1s ease-out forwards" }}
+                    >
                       <img
                         src={`/pawns/${
-                          piece.color === "w" ? "White" : "Black"
-                        }${piece.type.toUpperCase()}.svg`}
-                        alt={piece.type}
-                        className="w-3/4 h-3/4"
+                          timeOutWinner
+                            ? timeOutWinner.charAt(0).toUpperCase() +
+                              timeOutWinner.slice(1)
+                            : game.current.turn === "w"
+                            ? "Black"
+                            : "White"
+                        }King.svg`}
+                        alt="King"
+                        className="w-16 h-16 mb-4 opacity-0"
+                        style={{
+                          animation: "slideDown 1s ease-out forwards",
+                          animationDelay: "0.3s",
+                        }}
                       />
-                    )}
+                      <div
+                        className="text-4xl font-bold opacity-0"
+                        style={{
+                          animation: "slideDown 1s ease-out forwards",
+                          animationDelay: "0.5s",
+                        }}
+                      >
+                        {timeOutWinner ? "TIME'S UP!" : "CHECKMATE!"}
+                      </div>
+                      <div
+                        className="text-2xl mt-2 opacity-0"
+                        style={{
+                          animation: "slideDown 1s ease-out forwards",
+                          animationDelay: "0.8s",
+                        }}
+                      >
+                        {timeOutWinner
+                          ? `${
+                              timeOutWinner.charAt(0).toUpperCase() +
+                              timeOutWinner.slice(1)
+                            } Wins!`
+                          : `${
+                              game.current.turn === "w" ? "Black" : "White"
+                            } Wins!`}
+                      </div>
+                    </div>
+                  )}
+                  <div className="w-full h-full shadow-lg rounded-sm overflow-hidden">
+                    <div className="w-full h-full grid grid-cols-8 grid-rows-8">
+                      {boardState.map((row, rowIndex) =>
+                        row.map((piece, colIndex) => {
+                          const rank = ranks[rowIndex];
+                          const file = files[colIndex];
+                          const square = `${file}${rank}`;
+                          const pieceImage = getPieceImage(piece);
+                          const isSelected = selectedSquare === square;
+                          const isMoveableTo = isPossibleMove(square);
+
+                          return (
+                            <div
+                              key={square}
+                              id={square}
+                              className={`w-full h-full flex items-center justify-center cursor-pointer transition-all duration-300 ease-out ${
+                                isSelected ? "shadow-glow" : ""
+                              }`}
+                              style={{
+                                backgroundColor:
+                                  (rowIndex + colIndex) % 2 === 0
+                                    ? lightColor
+                                    : darkColor,
+                                ...(isSelected && {
+                                  boxShadow: `0 0 15px 2px ${highlightColor}`,
+                                  border: `2px solid ${highlightColor}`,
+                                  transform: "scale(1.02)",
+                                }),
+                                ...(isMoveableTo && {
+                                  backgroundColor: PossibleMoveColor,
+                                }),
+                              }}
+                              data-square={square}
+                              onClick={() => handleSquareClick(square)}
+                            >
+                              <div
+                                className={`w-full h-full flex items-center justify-center transition-transform duration-200 ease-out ${
+                                  isSelected ? "scale-102" : ""
+                                }`}
+                              >
+                                {pieceImage && (
+                                  <img
+                                    src={pieceImage}
+                                    alt={piece}
+                                    className="w-3/4 h-3/4"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                );
-              })
-            )}
+                </div>
+              </div>
+              <div className="flex pl-7 mt-1">
+                <div className="flex-1 grid grid-cols-8 text-gray-600 font-medium">
+                  {files.map((file) => (
+                    <div
+                      key={file}
+                      className="flex items-center justify-center text-sm sm:text-base md:text-lg"
+                    >
+                      {file}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Chat Section */}
-      <div className="w-full lg:w-[300px] bg-gray-900/50 rounded-xl p-4">
-        <div className="flex flex-col h-full">
-          <div className="mb-4">
-            <h3 className="text-purple-300 text-lg font-medium">
-              Room: {roomId}
-            </h3>
-          </div>
-
-          <div className="flex-1 overflow-y-auto mb-4 space-y-2">
-            {messages.map((msg, index) => (
-              <div key={index} className="bg-gray-800/50 rounded p-2">
-                <span className="text-purple-300 font-medium">
-                  {msg.sender}:{" "}
-                </span>
-                <span className="text-gray-300">{msg.text}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-              className="flex-1 bg-gray-800/50 rounded px-3 py-2 text-white"
-              placeholder="Type a message..."
-            />
-            <button
-              onClick={sendMessage}
-              className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded text-purple-300"
-            >
-              Send
-            </button>
-          </div>
+        <div className="w-full mt-[1vh]" style={{ maxWidth: `${boardSize}px` }}>
+          <PlayerInfoBar
+            color="white"
+            username={playerInfo.white.username}
+            avatar={playerInfo.white.avatar}
+            timeLeft={whiteTime}
+            isActive={activeTimer === "white"}
+            capturedPieces={capturedPieces.white}
+          />
         </div>
       </div>
 
@@ -292,7 +623,7 @@ const ChessboardLan: React.FC<ChessboardLanProps> = ({
           }
         }
       `}</style>
-    </div>
+    </>
   );
 };
 
