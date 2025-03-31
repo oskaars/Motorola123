@@ -10,10 +10,17 @@ import { ChessGame, PieceSymbol, Square } from "@/app/utils/chess";
 import WebSocketClient from "@/app/lib/websocket";
 import { useTheme } from "@/context/ThemeContext";
 
-interface ChessboardProps {
+export interface ChessboardProps {
   maxSize?: number;
   minSize?: number;
   className?: string;
+  fen: string;
+  lightColor: string;
+  darkColor: string;
+  highlightColor: string;
+  possibleMoveColor: string;
+  setLastMove: (move: string) => void;
+  gameMode: 'ai' | 'multiplayer';
 }
 
 const getPieceImage = (piece: PieceSymbol | " "): string | null => {
