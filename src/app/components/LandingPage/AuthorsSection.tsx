@@ -8,32 +8,32 @@ interface Author {
 const AuthorsSection = ({ authors }: { authors?: Author[] }) => {
   const defaultAuthors: Author[] = [
     {
-      name: "Marcin",
-      description: "Main UI/UX Developer",
-      avatar: "/avatars/marcin.png",
+      name: "Dawid",
+      description: "Backend and Chess Engine Developer",
+      avatar: "/avatars/Dawid.png",
       position: "left",
     },
     {
-      name: "Oskar",
-      description: "LOREM",
-      avatar: "/avatars/oskar.png",
+      name: "Marcin",
+      description: "Main UI/UX Developer",
+      avatar: "/avatars/marcin.png",
       position: "right",
+    },
+    {
+      name: "Oskar",
+      description: "Full Stack Developer",
+      avatar: "/avatars/oskar.png",
     },
     {
       name: "Mateusz",
-      description: "LOREM",
+      description: "Full Stack Dev",
       avatar: "/avatars/mateusz.png",
-    },
-    {
-      name: "Dawid",
-      description: "LOREM",
-      avatar: "/avatars/placeholder.jpg",
       position: "right",
     },
     {
-      name: "Jakub",
-      description: "Lorem",
-      avatar: "/avatars/placeholder.jpg",
+      name: "Kuba",
+      description: "Hosting and Docs Maintainer",
+      avatar: "/avatars/kuba.png",
     },
   ];
 
