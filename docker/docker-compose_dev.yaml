@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  webapp:
+    image: node:18
+    container_name: webapp
+    working_dir: /app
+    ports:
+      - "3002:3000"
+    command: >
+      sh -c "git clone https://github.com/oskaars/Motorola123.git /app && \
+             cd /app && \
+             npm install && \
+             npm run dev"
+    environment:
+      - NODE_ENV=development
