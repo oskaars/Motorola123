@@ -10,6 +10,8 @@ interface ServerChessboardProps {
   game: ChessGame;
   onPlayerMove: (from: Square, to: Square) => void;
   isThinking: boolean;
+  whiteTimeRemaining?: string;
+  blackTimeRemaining?: string;
 }
 
 const getPieceImage = (piece: PieceSymbol | " "): string | null => {
@@ -49,6 +51,7 @@ interface PlayerInfoBarProps {
   isActive: boolean;
   capturedPieces: string[];
   isThinking?: boolean;
+  timeRemaining?: string;
 }
 
 const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
@@ -58,6 +61,7 @@ const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
   isActive,
   capturedPieces,
   isThinking,
+  timeRemaining,
 }) => (
   <div
     className={`w-full flex items-center justify-between p-[1.5vh] rounded-[1vh] transition-all duration-300 ${
@@ -91,6 +95,15 @@ const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
         ))}
       </div>
     </div>
+    {timeRemaining && (
+      <div
+        className={`font-mono text-[2.4vh] font-semibold ${
+          isActive ? "text-white" : "text-gray-400"
+        }`}
+      >
+        {timeRemaining}
+      </div>
+    )}
   </div>
 );
 
@@ -101,6 +114,8 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
   game,
   onPlayerMove,
   isThinking,
+  whiteTimeRemaining,
+  blackTimeRemaining,
 }) => {
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -162,8 +177,11 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
     updateSize();
     window.addEventListener("resize", updateSize);
     window.addEventListener("orientationchange", updateSize);
-    
-    if (typeof ResizeObserver !== "undefined" && boardRef.current?.parentElement) {
+
+    if (
+      typeof ResizeObserver !== "undefined" &&
+      boardRef.current?.parentElement
+    ) {
       const observer = new ResizeObserver(updateSize);
       observer.observe(boardRef.current.parentElement);
       return () => {
@@ -172,7 +190,7 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
         window.removeEventListener("orientationchange", updateSize);
       };
     }
-    
+
     return () => {
       window.removeEventListener("resize", updateSize);
       window.removeEventListener("orientationchange", updateSize);
@@ -191,10 +209,10 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
     if (selectedSquare) {
       if (possibleMoves.includes(square)) {
         const targetPiece = game.getPiece(square);
-        
+
         if (targetPiece && targetPiece !== " ") {
           const isWhitePiece = targetPiece === targetPiece.toUpperCase();
-          setCapturedPieces(prev => ({
+          setCapturedPieces((prev) => ({
             ...prev,
             [isWhitePiece ? "black" : "white"]: [
               ...prev[isWhitePiece ? "black" : "white"],
@@ -202,15 +220,16 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
             ],
           }));
         }
-        
+
         onPlayerMove(selectedSquare, square);
-        
+
         setSelectedSquare(null);
         setPossibleMoves([]);
       } else {
         const piece = game.getPiece(square);
-        const isWhitePiece = piece && piece !== " " && piece === piece.toUpperCase();
-        
+        const isWhitePiece =
+          piece && piece !== " " && piece === piece.toUpperCase();
+
         if (isWhitePiece) {
           setSelectedSquare(square);
           setPossibleMoves(game.getPossibleMoves(square, true));
@@ -221,8 +240,9 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
       }
     } else {
       const piece = game.getPiece(square);
-      const isWhitePiece = piece && piece !== " " && piece === piece.toUpperCase();
-      
+      const isWhitePiece =
+        piece && piece !== " " && piece === piece.toUpperCase();
+
       if (isWhitePiece) {
         setSelectedSquare(square);
         setPossibleMoves(game.getPossibleMoves(square, true));
@@ -246,6 +266,7 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
           isActive={game.turn === "b"}
           capturedPieces={capturedPieces.black}
           isThinking={isThinking}
+          timeRemaining={blackTimeRemaining}
         />
       </div>
 
@@ -275,7 +296,9 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
                     style={{ animation: "fadeIn 1s ease-out forwards" }}
                   >
                     <img
-                      src={`/pawns/${game.turn === "w" ? "Black" : "White"}King.svg`}
+                      src={`/pawns/${
+                        game.turn === "w" ? "Black" : "White"
+                      }King.svg`}
                       alt="King"
                       className="w-16 h-16 mb-4 opacity-0"
                       style={{
@@ -382,6 +405,7 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
           avatar={playerInfo.white.avatar}
           isActive={game.turn === "w"}
           capturedPieces={capturedPieces.white}
+          timeRemaining={whiteTimeRemaining}
         />
       </div>
 

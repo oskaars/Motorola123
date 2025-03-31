@@ -4,33 +4,64 @@ import Head from "next/head";
 import CursorTrail from "@/app/components/Global/CursorTrail";
 import "/src/globals.css";
 import "/public/fonts/fonts.css";
-import ObserverProvider from "@/app/components/Global/ObserverProvider";
 import ServerGameWindow from "@/app/components/ServerGameWindow";
+import ObserverProvider from "@/app/components/Global/ObserverProvider";
+
+type EngineType = "Minimax" | "MCTS";
+type TimeControlType = "blitz" | "rapid" | "classical" | "custom";
+
+interface EngineSettings {
+  type: EngineType;
+  useBook: boolean;
+  depth: number;
+  timeControl?: {
+    type: TimeControlType;
+    baseTime: number;
+    increment: number;
+  };
+}
 
 export default function EnginePage() {
   const [isHoveringNavbar, setIsHoveringNavbar] = useState(false);
-  const [engineSettings, setEngineSettings] = useState({
-    type: "Minimax",
-    useBook: false,
-    depth: 5
-  });
+  const [engineSettings, setEngineSettings] = useState<EngineSettings | null>(null);
 
   useEffect(() => {
-    try {
-      const savedSettings = localStorage.getItem('engineSettings');
-      if (savedSettings) {
-        setEngineSettings(JSON.parse(savedSettings));
-        localStorage.removeItem('engineSettings');
+    // Load engine settings from localStorage
+    const savedSettings = localStorage.getItem('engineSettings');
+    if (savedSettings) {
+      try {
+        const parsedSettings = JSON.parse(savedSettings);
+        setEngineSettings(parsedSettings);
+      } catch (e) {
+        console.error("Failed to parse engine settings", e);
+        setDefaultSettings();
       }
-    } catch (error) {
-      console.error("Error loading engine settings:", error);
+    } else {
+      setDefaultSettings();
     }
   }, []);
+
+  const setDefaultSettings = () => {
+    const defaultSettings = {
+      type: "Minimax" as EngineType,
+      useBook: false,
+      depth: 5,
+      timeControl: {
+        type: "rapid" as TimeControlType,
+        baseTime: 600,
+        increment: 5
+      }
+    };
+    
+    setEngineSettings(defaultSettings);
+    // Also save to localStorage for consistency
+    localStorage.setItem('engineSettings', JSON.stringify(defaultSettings));
+  };
 
   return (
     <>
       <Head>
-        <title>Gambit.pl - Playing Against Engine</title>
+        <title>Gambit+ | Play against Engine</title>
       </Head>
       <ObserverProvider>
         <div className="min-h-screen flex flex-col">
@@ -40,7 +71,7 @@ export default function EnginePage() {
           ></div>
 
           <main className="flex-grow">
-            <ServerGameWindow initialSettings={engineSettings} />
+            {engineSettings && <ServerGameWindow initialSettings={engineSettings} />}
           </main>
 
           {!isHoveringNavbar && <CursorTrail />}

@@ -1,7 +1,7 @@
 // src/api/engine.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ChessGame } from '@/app/utils/chess';
-import { UciWebSocketClient } from '@/app/lib/ws-client';
+import { UciWebSocketClient, TimeControlParams } from '@/app/lib/ws-client';
 
 const engineBridge = new UciWebSocketClient('', 'ws://127.0.0.1:3100/ws');
 
@@ -17,8 +17,18 @@ export default async function handler(
           res.status(200).json({ success: true });
         } else if (req.body.action === 'analyze') {
           const fen = req.body.fen || new ChessGame().toFEN();
+          const timeControl: TimeControlParams = {
+            wtime: req.body.wtime,
+            btime: req.body.btime,
+            winc: req.body.winc,
+            binc: req.body.binc,
+            movestogo: req.body.movestogo,
+            movetime: req.body.movetime,
+            depth: req.body.depth
+          };
+          
           await engineBridge.setPosition(fen);
-          const bestMove = await engineBridge.startSearch();
+          const bestMove = await engineBridge.startSearch(timeControl);
           res.status(200).json({ bestMove });
         }
         break;

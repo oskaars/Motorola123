@@ -1,5 +1,15 @@
 import WebSocket from 'isomorphic-ws';
 
+export interface TimeControlParams {
+  wtime?: number;    // White's remaining time in milliseconds
+  btime?: number;    // Black's remaining time in milliseconds
+  winc?: number;     // White's increment per move in milliseconds
+  binc?: number;     // Black's increment per move in milliseconds
+  movestogo?: number; // Moves to go until next time control
+  movetime?: number;  // Time to spend on the move in milliseconds
+  depth?: number;     // Search depth limit
+}
+
 export class UciWebSocketClient {
   private ws: WebSocket | null = null;
   private clientId: string | null = null;
@@ -10,8 +20,13 @@ export class UciWebSocketClient {
     responses: string[];
   }> = new Map();
   private commandCounter = 0;
+  private connectionLostHandler: (() => void) | null = null;
 
   constructor(private enginePath: string, private serverUrl = 'ws://127.0.0.1:3100/ws') {}
+
+  public onConnectionLost(callback: () => void): void {
+    this.connectionLostHandler = callback;
+  }
 
   public async initialize(): Promise<void> {
     if (this.connected) return;
@@ -57,6 +72,10 @@ export class UciWebSocketClient {
         
         this.ws.onerror = (error) => {
           console.error('WebSocket error:', error);
+          this.connected = false;
+          if (this.connectionLostHandler) {
+            this.connectionLostHandler();
+          }
           reject(error);
         };
         
@@ -64,6 +83,9 @@ export class UciWebSocketClient {
           console.log('WebSocket connection closed');
           this.connected = false;
           this.clientId = null;
+          if (this.connectionLostHandler) {
+            this.connectionLostHandler();
+          }
         };
       } catch (error) {
         console.error('Failed to establish WebSocket connection:', error);
@@ -86,8 +108,20 @@ export class UciWebSocketClient {
     await this.sendCommand(`position fen ${fen}`);
   }
 
-  public async startSearch(depth = 15, movetime = 1000): Promise<string> {
-    const responses = await this.sendCommand(`go depth ${depth} movetime ${movetime}`);
+  public async startSearch(timeControl: TimeControlParams = {}): Promise<string> {
+    const { depth = 15, movetime = 1000, wtime, btime, winc, binc, movestogo } = timeControl;
+    
+    let goCommand = 'go';
+    
+    if (wtime !== undefined) goCommand += ` wtime ${wtime}`;
+    if (btime !== undefined) goCommand += ` btime ${btime}`;
+    if (winc !== undefined) goCommand += ` winc ${winc}`;
+    if (binc !== undefined) goCommand += ` binc ${binc}`;
+    if (movestogo !== undefined) goCommand += ` movestogo ${movestogo}`;
+    if (movetime !== undefined) goCommand += ` movetime ${movetime}`;
+    if (depth !== undefined) goCommand += ` depth ${depth}`;
+    
+    const responses = await this.sendCommand(goCommand);
     
     const bestMoveResponse = responses.find(r => r.startsWith('bestmove'));
     if (!bestMoveResponse) {
@@ -100,7 +134,11 @@ export class UciWebSocketClient {
 
   public async sendCommand(command: string): Promise<string[]> {
     if (!this.connected || !this.ws || !this.clientId) {
-      await this.connect();
+      try {
+        await this.connect();
+      } catch (error) {
+        return Promise.reject(new Error("Failed to connect to WebSocket server"));
+      }
     }
     
     return new Promise((resolve, reject) => {
@@ -179,7 +217,11 @@ export class UciWebSocketClient {
 
   public async disconnect(): Promise<void> {
     if (this.ws && this.connected) {
-      await this.sendCommand('quit');
+      try {
+        await this.sendCommand('quit');
+      } catch (error) {
+        console.warn('Error sending quit command:', error);
+      }
       this.ws.close();
       this.ws = null;
       this.connected = false;
