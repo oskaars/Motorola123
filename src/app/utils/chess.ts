@@ -298,7 +298,6 @@ export class ChessGame {
         moves.push(endSquare);
       } else {
         const tempBoard = this.board.map(row => [...row]);
-        const capturedPiece = tempBoard[endRow][endCol];
         tempBoard[endRow][endCol] = piece;
         tempBoard[row][col] = EMPTY;
         const isLegal = !this.isKingInCheckAfterMove(color, [row, col], [endRow, endCol], tempBoard);
@@ -616,8 +615,6 @@ export class ChessGame {
   generateSAN(move: Move): string {
     let san = '';
     const piece = move.piece.toUpperCase();
-    const fromCoords = algebraicToCoords(move.from)!;
-    const toCoords = algebraicToCoords(move.to)!;
 
     if (move.flags.includes(FLAGS.KSIDE_CASTLE)) return 'O-O';
     if (move.flags.includes(FLAGS.QSIDE_CASTLE)) return 'O-O-O';
@@ -725,12 +722,7 @@ export class ChessGame {
 
     const count = (arr: string[], piece: string) => arr.filter(p => p.toLowerCase() === piece).length;
 
-    const whitePawns = count(whitePieces, PAWN);
-    const blackPawns = count(blackPieces, PAWN);
-    const whiteRooks = count(whitePieces, ROOK);
-    const blackRooks = count(blackPieces, ROOK);
-    const whiteQueens = count(whitePieces, QUEEN);
-    const blackQueens = count(blackPieces, QUEEN);
+
     const whiteKnights = count(whitePieces, KNIGHT);
     const blackKnights = count(blackPieces, KNIGHT);
     const whiteBishops = count(whitePieces, BISHOP);

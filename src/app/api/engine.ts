@@ -1,9 +1,7 @@
 // src/api/engine.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ChessGame } from '@/app/utils/chess';
-import { WsClient } from '@/app/lib/ws-client';
-
-const engineBridge = new WsClient('./path/to/your/rust/engine');
+import { WsClient } from '@/app/lib/ws-client';const engineBridge = new WsClient('./path/to/your/rust/engine');
 
 export default async function handler(
   req: NextApiRequest,

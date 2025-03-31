@@ -9,6 +9,7 @@ import React, {
 import { ChessGame, PieceSymbol, Square } from "@/app/utils/chess";
 import WebSocketClient from "@/app/lib/websocket";
 import { useTheme } from "@/context/ThemeContext";
+import Image from "next/image";
 
 export interface ChessboardProps {
   maxSize?: number;
@@ -94,7 +95,7 @@ const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
       </span>
       <div className="flex gap-[0.5vh] items-center ml-[2vh]">
         {capturedPieces.map((piece, index) => (
-          <img
+          <Image
             key={index}
             src={getPieceImage(piece as PieceSymbol)}
             alt={piece}
