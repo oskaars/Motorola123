@@ -1,11 +1,11 @@
 const FeatureCards = () => {
   const cards = [
-    { id: 1, title: "React js", desc: "skibidi sigma" },
-    { id: 2, title: "Html", desc: "sigma v2" },
-    { id: 3, title: "Feature 3", desc: "Lorem ipsum dolor sit amet..." },
-    { id: 4, title: "Feature 4", desc: "Lorem ipsum dolor sit amet..." },
-    { id: 5, title: "Feature 5", desc: "Lorem ipsum dolor sit amet..." },
-    { id: 6, title: "Feature 6", desc: "Lorem ipsum dolor sit amet..." },
+    { id: 1, title: "Rust Engine", desc: "The chess engine, powering the game's move validation. " },
+    { id: 2, title: "Mini-max Algorithm", desc: "Used to calculate the best possible moves for the chess engine by evaluating future game states." },
+    { id: 3, title: "Monte Carlo Tree Search", desc: "Sophisticated algorithm that simulates thousands of potential game outcomes to determine the most promising moves, adapting to any playing style." },
+    { id: 4, title: "Websocket", desc: "Secure, low-latency multiplayer connections allowing for seamless gameplay with opponents worldwide, with move synchronization in milliseconds." },
+    { id: 5, title: "Opening book Integration", desc: "Comprehensive database of chess openings and variations, allowing the engine to play strategic early-game positions based on centuries of chess theory." },
+    { id: 6, title: "Our own chess module", desc: "A custom chess module that handles all the game logic, including move validation, checkmate detection, and game state management." } 
   ];
 
   return (
@@ -34,7 +34,7 @@ const FeatureCards = () => {
             min-width: 0;
           }
 
-          .card-container::before {
+          .card-container::before {ż
             content: "";
             position: absolute;
             inset: -2px;
