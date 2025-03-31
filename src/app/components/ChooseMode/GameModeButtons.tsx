@@ -2,14 +2,15 @@
 import React, { useState } from "react";
 import { FaRobot } from "react-icons/fa";
 import { PiNetwork } from "react-icons/pi";
-import LanOptions from "./LanOptions";
 import ComputerOptions from "./ComputerOptions";
 import { BsFillPeopleFill } from "react-icons/bs";
 import Link from "next/link";
 import LocalGameWindow from "../LocalGameWindow";
+import { useRouter } from "next/navigation";
 
 const GameModeButtons: React.FC = () => {
   const [mode, setMode] = useState<string | null>(null);
+  const router = useRouter();
 
   return (
     <div className="w-full min-h-screen flex flex-col items-center mb-[10vh]">
@@ -68,7 +69,7 @@ const GameModeButtons: React.FC = () => {
 
             <div
               className="p-[2.5vh] rounded-[2vh] border-[0.4vh] border-purple-900 bg-gray-900/50 backdrop-blur-sm cursor-pointer transition-all hover:border-purple-500 w-[80vw] lg:w-[45vh] h-[35vh] flex flex-col justify-center items-center"
-              onClick={() => setMode("LAN")}
+              onClick={() => router.push("/play/multiplayer")}
             >
               <PiNetwork className="text-[7vh] text-purple-400 mb-[2vh]" />
               <h3 className="text-[3.2vh] font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
@@ -94,7 +95,6 @@ const GameModeButtons: React.FC = () => {
           </div>
         ) : (
           <>
-            {mode === "LAN" && <LanOptions onBack={() => setMode(null)} />}
             {mode === "Computer" && (
               <ComputerOptions onBack={() => setMode(null)} />
             )}
