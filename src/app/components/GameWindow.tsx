@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import Chessboard from "./Chessboard2";
+import Chessboard from "./Chessboard";
 import ThemeSettings from "./ThemeSettings";
 
 const GameWindow = () => {
