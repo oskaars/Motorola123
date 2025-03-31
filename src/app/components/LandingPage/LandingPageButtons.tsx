@@ -19,7 +19,7 @@ const LandingPageButtons = () => {
             animation: "floatAnimation 6s ease-in-out infinite",
           }}
         >
-          Gambit.pl
+          Gambit+
         </h1>
         <TypewriterText />
       </div>
