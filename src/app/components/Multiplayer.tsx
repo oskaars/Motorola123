@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { algebraicToCoords, ChessGame, PieceSymbol, Square,  } from "@/app/utils/chess";
+import { algebraicToCoords, ChessGame, PieceSymbol, Square, validateFen } from "@/app/utils/chess";
 import {WebSocketClient} from '@/app/lib/websocket';
 
 interface ChessboardProps {
@@ -72,14 +72,10 @@ const PlayerInfoBar = ({
   </div>
 );
 
-const Chessboard: React.FC<ChessboardProps> = ({
-                                                 maxSize = 800,
-                                                 minSize = 280,
-                                                 className = ""
-                                               }) => {
+const Chessboard: React.FC<ChessboardProps> = ({maxSize = 800,minSize = 280,className = ""}) => {
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
-  const [game] = useState(() => new ChessGame());
+  const [game, setGame] = useState(() => new ChessGame());
   const [boardState, setBoardState] = useState(game.board);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
@@ -155,7 +151,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
         "Share this ID with your opponent to join the game."
       ]);
       
-      // Request color assignment after room is created
       setTimeout(() => {
         console.log("Requesting color assignment after room creation");
         client.sendRequestColor();
@@ -199,7 +194,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
         setBoardState(JSON.parse(JSON.stringify(game.board)));
         setChatMessages(prev => [...prev, `${data.sender} moved: ${data.notation}`]);
 
-        // Toggle timer after opponent's move
         setActiveTimer(game.turn === 'w' ? 'white' : 'black');
 
         if (game.isCheckmate()) {
@@ -239,7 +233,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
       blackPlayer: string,
       timeInSeconds: number
     }) => {
-      // Validation layer
       if (data.whitePlayer === data.blackPlayer) {
         console.error('Server sent invalid player assignment:', data);
         setChatMessages(prev => [...prev, "Server error: Invalid game setup"]);
@@ -256,7 +249,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
         return;
       }
 
-      // Proceed with valid setup
       setGameReady(true);
       setWhiteTime(data.timeInSeconds);
       setBlackTime(data.timeInSeconds);
@@ -414,7 +406,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
         setSelectedSquare(null);
         setPossibleMoves([]);
 
-        // Toggle timer
         setActiveTimer(game.turn === 'w' ? 'white' : 'black');
 
         if (game.isCheckmate()) {
@@ -665,24 +656,30 @@ const Chessboard: React.FC<ChessboardProps> = ({
         <>
           <div className="mb-4">
             <h3 className="text-lg font-bold mb-2">Game Time</h3>
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 flex-wrap">
               <button
                 onClick={() => setSelectedTimeOption(60)}
-                className={`px-4 py-2 rounded-md ${selectedTimeOption === 60 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                className={`px-4 py-2 rounded-md m-1 ${selectedTimeOption === 60 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
               >
                 1 Min
               </button>
               <button
                 onClick={() => setSelectedTimeOption(180)}
-                className={`px-4 py-2 rounded-md ${selectedTimeOption === 180 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                className={`px-4 py-2 rounded-md m-1 ${selectedTimeOption === 180 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
               >
                 3 Min
               </button>
               <button
                 onClick={() => setSelectedTimeOption(600)}
-                className={`px-4 py-2 rounded-md ${selectedTimeOption === 600 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                className={`px-4 py-2 rounded-md m-1 ${selectedTimeOption === 600 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
               >
                 10 Min
+              </button>
+              <button
+                onClick={() => setSelectedTimeOption(3600)}
+                className={`px-4 py-2 rounded-md m-1 ${selectedTimeOption === 3600 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                60 Min
               </button>
             </div>
           </div>
@@ -716,7 +713,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
       )}
     </div>
 
-    {/* Room ID display */}
     {roomId && (
       <div className="mt-4 w-full max-w-md">
         <div className="bg-blue-100 p-4 rounded-lg shadow-md flex items-center justify-between">
@@ -737,7 +733,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
       </div>
     )}
 
-    {/* Game status */}
     {roomId && !gameReady && (
       <div className="mt-4 w-full max-w-md">
         <div className="bg-yellow-100 p-4 rounded-lg shadow-md">
@@ -746,7 +741,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
       </div>
     )}
 
-    {/* Chat section */}
     <div className="mt-4 w-full max-w-md">
       <div className="bg-gray-100 p-4 rounded-lg shadow-md">
         <h3 className="text-lg font-bold mb-2">Chat</h3>

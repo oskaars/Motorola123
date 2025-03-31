@@ -22,7 +22,6 @@ export class WebSocketClient {
     this.socket.onopen = () => {
       console.log('WebSocket connected');
       this.socketReady = true;
-      // Trigger custom event
       this.triggerEvent('SOCKET_READY', {});
     };
 
@@ -35,11 +34,9 @@ export class WebSocketClient {
     this.socket.onclose = () => {
       console.log('WebSocket disconnected');
       this.socketReady = false;
-      // Reconnect logic if needed
     };
   }
 
-  // Helper method to ensure socket is ready
   private ensureSocketReady(callback: () => void) {
     if (this.socketReady) {
       callback();
