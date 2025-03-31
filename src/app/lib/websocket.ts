@@ -1,28 +1,15 @@
 export class WebSocketClient {
   private socket: WebSocket;
   private roomId: string | null = null;
-  public username: string; // Change to public
+  public username: string;
   private eventHandlers: { [key: string]: Function[] } = {};
+  private socketReady: boolean = false;
 
   constructor(username: string) {
-    this.username = username; // Now accessible from outside
+    this.username = username; 
     console.log(`Creating WebSocketClient for user: ${username}`);
     this.socket = new WebSocket('ws://localhost:8080');
-
-    this.socket.onopen = () => {
-      console.log('WebSocket connection established');
-    };
-
-    this.socket.onmessage = (event) => this.onMessage(event);
-
-    this.socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    this.socket.onclose = () => {
-      console.log('WebSocket connection closed');
-      setTimeout(() => this.reconnect(), 3000);
-    };
+    this.setupSocket();
   }
 
   private reconnect() {
@@ -33,11 +20,10 @@ export class WebSocketClient {
 
   private setupSocket() {
     this.socket.onopen = () => {
-      console.log('WebSocket connection reestablished');
-      if (this.roomId) {
-        console.log('Rejoining room:', this.roomId);
-        this.joinRoom(this.roomId);
-      }
+      console.log('WebSocket connected');
+      this.socketReady = true;
+      // Trigger custom event
+      this.triggerEvent('SOCKET_READY', {});
     };
 
     this.socket.onmessage = (event) => this.onMessage(event);
@@ -47,21 +33,41 @@ export class WebSocketClient {
     };
 
     this.socket.onclose = () => {
-      console.log('WebSocket connection closed');
-      setTimeout(() => this.reconnect(), 3000);
+      console.log('WebSocket disconnected');
+      this.socketReady = false;
+      // Reconnect logic if needed
     };
+  }
+
+  // Helper method to ensure socket is ready
+  private ensureSocketReady(callback: () => void) {
+    if (this.socketReady) {
+      callback();
+    } else {
+      console.log('Socket not ready, waiting...');
+      setTimeout(() => this.ensureSocketReady(callback), 100);
+    }
   }
 
   private onMessage(event: MessageEvent) {
     try {
       const data = JSON.parse(event.data);
       console.log('Received message from server:', data);
+      if (data.type === 'ROOM_CREATED' || data.type === 'JOINED_ROOM') {
+        this.roomId = data.roomId;
+        console.log(`Set roomId to ${this.roomId}`);
+      }
       if (this.eventHandlers[data.type]) {
         this.eventHandlers[data.type].forEach(handler => handler(data));
       }
     } catch (error) {
       console.error('Error processing message:', error);
     }
+  }
+
+  private triggerEvent(type: string, data: any) {
+    const handlers = this.eventHandlers[type] || [];
+    handlers.forEach(handler => handler(data));
   }
 
   addEventListener(event: string, handler: Function) {
@@ -78,23 +84,36 @@ export class WebSocketClient {
   }
 
   createRoom(timeInSeconds: number = 600) {
-    console.log(`Creating room with ${timeInSeconds} seconds per player`);
-    this.socket.send(JSON.stringify({
-      type: 'CREATE_ROOM',
-      username: this.username,
-      timeInSeconds: timeInSeconds
-    }));
+    console.log(`Attempting to create room with ${timeInSeconds} seconds`);
+    
+    this.ensureSocketReady(() => {
+      console.log(`Creating room with ${timeInSeconds} seconds per player`);
+      try {
+        const message = JSON.stringify({
+          type: 'CREATE_ROOM',
+          username: this.username,
+          timeInSeconds: timeInSeconds
+        });
+        console.log('Sending message:', message);
+        this.socket.send(message);
+      } catch (error) {
+        console.error('Error creating room:', error);
+      }
+    });
   }
 
   joinRoom(roomId: string) {
-    this.roomId = roomId;
-    this.socket.send(JSON.stringify({
-      type: 'JOIN_ROOM',
-      roomId,
-      username: this.username
-    }));
+    console.log(`Attempting to join room: ${roomId}`);
+    
+    this.ensureSocketReady(() => {
+      console.log(`Joining room: ${roomId}`);
+      this.socket.send(JSON.stringify({
+        type: 'JOIN_ROOM',
+        roomId: roomId,
+        username: this.username
+      }));
+    });
 
-    // Queue color request after server acknowledgement
     this.addEventListener('JOINED_ROOM', () => {
       setTimeout(() => this.sendRequestColor(), 100);
     });
@@ -126,10 +145,11 @@ export class WebSocketClient {
   }
   sendTimeOut(winner: string) {
     if (this.roomId) {
+      console.log(`Sending timeout notification. Winner: ${winner}`);
       this.socket.send(JSON.stringify({
         type: 'TIME_OUT',
         roomId: this.roomId,
-        winner
+        winner: winner
       }));
     }
   }
@@ -150,15 +170,19 @@ export class WebSocketClient {
     }
   }
   sendRequestColor() {
-    if (!this.roomId) {
-      console.error('Room ID missing in color request');
-      return;
+    if (this.roomId) {
+      console.log(`Requesting color assignment for ${this.username} in room ${this.roomId}`);
+      
+      this.ensureSocketReady(() => {
+        this.socket.send(JSON.stringify({
+          type: 'REQUEST_COLOR',
+          roomId: this.roomId,
+          username: this.username
+        }));
+      });
+    } else {
+      console.error("Cannot request color: Not in a room");
     }
-    this.socket.send(JSON.stringify({
-      type: 'REQUEST_COLOR',
-      roomId: this.roomId,
-      username: this.username
-    }));
   }
 
 }

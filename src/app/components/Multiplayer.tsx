@@ -102,9 +102,13 @@ const Chessboard: React.FC<ChessboardProps> = ({
   const [selectedTimeOption, setSelectedTimeOption] = useState<number>(600);
   const [playerColor, setPlayerColor] = useState<'white' | 'black' | null>(null);
   const [gameReady, setGameReady] = useState<boolean>(false);
+  const [socketConnected, setSocketConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    const randomUsername = `Player${Math.floor(Math.random() * 1000)}`;
+    console.log("Initializing WebSocket client");
+    const randomUsername = `Player${Math.floor(Math.random() * 1000)}_${Date.now().toString().slice(-4)}`;
+    console.log(`Generated username: ${randomUsername}`);
+    
     const client = new WebSocketClient(randomUsername);
     setWsClient(client);
 
@@ -142,15 +146,20 @@ const Chessboard: React.FC<ChessboardProps> = ({
       ]);
       if (timerRef.current) clearInterval(timerRef.current);
     });
-    client.addEventListener('ROOM_CREATED', (data: RoomCreatedData) => {
+    client.addEventListener('ROOM_CREATED', (data: { roomId: string, timeInSeconds: number }) => {
+      console.log(`Room created event received: ${JSON.stringify(data)}`);
       setRoomId(data.roomId);
       setChatMessages(prev => [
-        ...prev,
+        ...prev, 
         `Room created! Your room ID is: ${data.roomId}`,
         "Share this ID with your opponent to join the game."
       ]);
-      console.log(`Room created: ${data.roomId}`);
-      client.sendRequestColor();
+      
+      // Request color assignment after room is created
+      setTimeout(() => {
+        console.log("Requesting color assignment after room creation");
+        client.sendRequestColor();
+      }, 500);
     });
 
     client.addEventListener('JOINED_ROOM', (data: JoinedRoomData) => {
@@ -271,8 +280,16 @@ const Chessboard: React.FC<ChessboardProps> = ({
       client.sendRequestColor();
     });
 
+    client.addEventListener('SOCKET_READY', () => {
+      console.log("Socket is now ready");
+      setSocketConnected(true);
+    });
+
     return () => {
-      client.leaveRoom();
+      console.log("Cleaning up WebSocket client");
+      if (client && roomId) {
+        client.leaveRoom();
+      }
     };
   }, []);
 
@@ -482,9 +499,13 @@ const Chessboard: React.FC<ChessboardProps> = ({
   };
 
   const createRoom = () => {
-    if (wsClient) {
-      wsClient.createRoom(selectedTimeOption);
+    if (!wsClient) {
+      console.error("WebSocket client not initialized");
+      return;
     }
+    
+    console.log(`Creating room with ${selectedTimeOption} seconds`);
+    wsClient.createRoom(selectedTimeOption);
   };
 
   const joinRoom = () => {
@@ -503,6 +524,11 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
   return (
     <div className={`flex flex-col items-center p-4 w-full mx-auto ${className}`}>
+      {!socketConnected && (
+        <div className="mt-4 p-2 bg-yellow-100 rounded text-center">
+          Connecting to server...
+        </div>
+      )}
       {isCheckmate && (
         <div className="absolute inset-0 bg-red-500 bg-opacity-75 flex items-center justify-center text-white text-4xl font-bold z-50">
           CHECKMATE!
