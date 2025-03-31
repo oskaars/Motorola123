@@ -52,7 +52,7 @@ const LandingPageButtons = () => {
         </button>
 
         <button
-          onClick={() => router.push("/documentation")}
+          onClick={() => window.open("https://github.com/oskaars/Motorola123/wiki", "_blank")}
           className="rounded-full bg-gray-800/20 backdrop-blur-sm border-[0.2vh] border-gray-700/50 transition-all duration-300 hover:bg-gray-800/60 text-white py-[1.5vh] w-[70vw] lg:w-[20vw]"
           style={{
             fontSize: "2vh",
