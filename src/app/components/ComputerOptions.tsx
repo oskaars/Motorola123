@@ -4,7 +4,7 @@ import { FaBrain, FaRobot, FaChessKing } from "react-icons/fa";
 
 const ComputerOptions: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   return (
-    <div className="w-full flex flex-col items-center">
+    <div className="relative z-[50] w-full flex flex-col items-center">
       {/* Back button container */}
       <div className="h-[6vh] mb-[4vh] flex items-center">
         <button

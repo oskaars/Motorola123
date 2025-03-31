@@ -28,6 +28,12 @@ const CurvedSeparator = () => {
       url: "https://react.dev/",
       color: "#61dafb",
     },
+    {
+      name: "Rust",
+      file: "Rust_programming_language_black_logo.svg",
+      url: "https://www.rust-lang.org/",
+      color: "#ffffff",
+    },
   ];
 
   return (

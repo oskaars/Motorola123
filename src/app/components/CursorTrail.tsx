@@ -12,7 +12,6 @@ const CursorTrail = () => {
   const circleCount = 20;
 
   useEffect(() => {
-    // Check if mobile device
     const checkIfMobile = () => {
       const isMobileDevice =
         window.innerWidth <= 768 ||
@@ -25,7 +24,7 @@ const CursorTrail = () => {
     checkIfMobile();
     window.addEventListener("resize", checkIfMobile);
 
-    if (isMobile) return; // Don't set up cursor trail if mobile
+    if (isMobile) return;
 
     const handleMouseMove = (e) => {
       coords.current.x = e.clientX;
@@ -46,7 +45,7 @@ const CursorTrail = () => {
     });
 
     const animateCircles = () => {
-      if (isMobile) return; // Stop animation if mobile
+      if (isMobile) return;
 
       const now = Date.now();
       const elapsedSinceLastMove =
@@ -105,7 +104,7 @@ const CursorTrail = () => {
     };
   }, [isMobile]);
 
-  if (isMobile) return null; // Don't render anything on mobile
+  if (isMobile) return null;
 
   return (
     <>

@@ -177,3 +177,17 @@ button {
   scrollbar-width: normal;
   scrollbar-color: rgba(180, 64, 226, 0.9) transparent;
 }
+
+@layer components {
+  .color-preview {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .chess-square {
+    @apply transition-colors duration-200 ease-in-out;
+  }
+}
+
+.shadow-glow {
+  filter: drop-shadow(0 0 8px currentColor);
+}

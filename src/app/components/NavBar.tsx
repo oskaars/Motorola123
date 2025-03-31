@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const NavBar: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
@@ -9,6 +10,7 @@ const NavBar: React.FC = () => {
   const [isMounted, setIsMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsMounted(true);
@@ -71,6 +73,15 @@ const NavBar: React.FC = () => {
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
+  const handlePlayNowClick = (e: React.MouseEvent) => {
+    if (pathname === "/play") {
+      e.preventDefault();
+      window.location.reload();
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setIsMenuOpen(false);
+  };
+
   return (
     <>
       <nav
@@ -101,7 +112,7 @@ const NavBar: React.FC = () => {
             </Link>
             <Link
               href="/play"
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              onClick={handlePlayNowClick}
               className="text-[2vh] hover:cursor-pointer motion-delay-[200ms] motion-opacity-in-0 motion-translate-y-in-[4vh] motion-duration-1000"
             >
               <div
@@ -186,8 +197,8 @@ const NavBar: React.FC = () => {
 
           <Link
             href="/play"
-            onClick={() => {
-              window.scrollTo({ top: 0, behavior: "smooth" });
+            onClick={(e) => {
+              handlePlayNowClick(e);
               setIsMenuOpen(false);
             }}
             className="text-[2.5vh] text-white hover:cursor-pointer "
