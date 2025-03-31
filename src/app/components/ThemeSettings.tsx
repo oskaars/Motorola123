@@ -35,10 +35,10 @@ const ThemeSettings = () => {
   }, [showColorMenu]);
 
   return (
-    <div className=" relative" ref={menuRef}>
+    <div className=" w-full relative" ref={menuRef}>
       <button
         onClick={() => setShowColorMenu(!showColorMenu)}
-        className="px-[3vw] py-3 bg-gray-900/50 border-2 border-[#5c085a] rounded-xl shadow-glow shadow-purple-500/20 hover:border-pink-500 transition-all text-sm font-medium text-purple-300 flex items-center gap-2 backdrop-blur-sm"
+        className="w-full py-3 bg-gray-900/50 border-2 border-[#5c085a] rounded-xl shadow-glow shadow-purple-500/20 hover:border-pink-500 transition-all text-sm font-medium text-purple-300 flex items-center gap-2 backdrop-blur-sm px-4 justify-center"
       >
         <svg
           className="w-5 h-5 text-pink-400"

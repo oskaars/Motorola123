@@ -18,6 +18,19 @@ const GameWindow = () => {
         <div className="bg-gray-900/50 border border-[#5c085a]/50 rounded-xl p-4 shadow-xl backdrop-blur-sm relative z-[99]">
           <ThemeSettings />
         </div>
+
+        <div className="flex-1 bg-gray-900/50 border border-[#5c085a]/50 rounded-xl p-4 shadow-xl backdrop-blur-sm ">
+          <div className="h-full flex flex-col items-center justify-center">
+            <span className="text-purple-300/80 text-xl mb-4">
+              🚧 Chat Under Construction 🚧
+            </span>
+            <div className="animate-pulse flex flex-col items-center">
+              <div className="w-16 h-16 bg-purple-500/20 rounded-full mb-4" />
+              <div className="h-4 bg-purple-500/20 rounded w-3/4 mb-2" />
+              <div className="h-4 bg-purple-500/20 rounded w-1/2" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
