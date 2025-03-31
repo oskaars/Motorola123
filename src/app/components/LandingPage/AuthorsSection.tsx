@@ -16,7 +16,7 @@ const AuthorsSection = ({ authors }: { authors?: Author[] }) => {
     {
       name: "Marcin",
       description: "Main UI/UX Developer",
-      avatar: "/avatars/marcin.png",
+      avatar: "/avatars/marcin.jpg",
       position: "right",
     },
     {
