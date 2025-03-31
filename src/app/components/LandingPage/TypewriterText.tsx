@@ -1,7 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
 
-const TEXTS = ["Best chess experience", "Super Sigma", "Bombardilo Crodillo"];
+const TEXTS = [
+  "Best chess experience",
+  "Best Chess Bots",
+  "Field Color Changing Feature",
+];
 
 const TypewriterText = () => {
   const [textIndex, setTextIndex] = useState(0);
