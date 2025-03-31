@@ -1,4 +1,4 @@
-# Gra w szachy – Gambit+
+# Gra w szachy – [Gambit+](https://gambit.plus)
 Projekt stworzony na Motorola Science Cup 2025 (eliminacje).
 
 ## Uruchamianie

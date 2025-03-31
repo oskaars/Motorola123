@@ -16,7 +16,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Gambit.pl - Antique Chess Experience</title>
+        <title>Gambit+</title>
       </Head>
       <ObserverProvider>
         <div className="min-h-screen flex flex-col">
