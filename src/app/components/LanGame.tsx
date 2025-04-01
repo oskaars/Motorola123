@@ -422,7 +422,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
-  const [game, setGame] = useState(() => new ChessGame());
+  const [game] = useState(() => new ChessGame());
   const [boardState, setBoardState] = useState(game.board);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
@@ -479,10 +479,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
     // Remove random username generation
     const client = new WebSocketClient(""); // Empty initial username
     setWsClient(client);
-
-    interface RoomCreatedData {
-      roomId: string;
-    }
 
     interface JoinedRoomData {
       roomId: string;
