@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 
+interface CircleElement extends HTMLDivElement {
+  x: number;
+  y: number;
+}
+
 const CursorTrail = () => {
   const [isMobile, setIsMobile] = useState(false);
-  const circleRefs = useRef([]);
+  const circleRefs = useRef<(CircleElement | null)[]>([]);
   const coords = useRef({ x: 0, y: 0 });
   const lastMoveTime = useRef(0);
-  const firstMoveTime = useRef(null);
+  const firstMoveTime = useRef<number | null>(null);
   const currentOpacity = useRef(0);
   const currentScale = useRef(0.5);
   const colors = ["#3B82F6", "#60A5FA", "#93C5FD", "#BFDBFE", "#DBEAFE"];
@@ -17,7 +22,7 @@ const CursorTrail = () => {
         window.innerWidth <= 768 ||
         "ontouchstart" in window ||
         navigator.maxTouchPoints > 0 ||
-        navigator.msMaxTouchPoints > 0;
+        navigator.maxTouchPoints > 0;
       setIsMobile(isMobileDevice);
     };
 
@@ -26,7 +31,7 @@ const CursorTrail = () => {
 
     if (isMobile) return;
 
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: { clientX: number; clientY: number; }) => {
       coords.current.x = e.clientX;
       coords.current.y = e.clientY;
       lastMoveTime.current = Date.now();
@@ -81,7 +86,7 @@ const CursorTrail = () => {
         const baseScale =
           (circleRefs.current.length - index) / circleRefs.current.length;
         circle.style.transform = `scale(${baseScale * currentScale.current})`;
-        circle.style.opacity = currentOpacity.current;
+        circle.style.opacity = currentOpacity.current.toString();
         circle.x = x;
         circle.y = y;
 
@@ -111,7 +116,7 @@ const CursorTrail = () => {
       {Array.from({ length: circleCount }).map((_, i) => (
         <div
           key={i}
-          ref={(el) => (circleRefs.current[i] = el)}
+          ref={(el) => { circleRefs.current[i] = el as CircleElement }}
           className={`fixed pointer-events-none h-8 w-8 rounded-full hidden lg:block ${
             i === 0 ? "z-[10]" : "z-[10]"
           }`}
