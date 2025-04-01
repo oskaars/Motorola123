@@ -232,6 +232,7 @@ const PromotionOverlay = ({
   );
 };
 
+// eslint-disable-next-line react/display-name
 const Chessboard = forwardRef<
   { resetGame: () => void; loadFEN: (fen: string) => void },
   Omit<ChessboardProps, "fen" | "setLastMove" | "gameMode">
@@ -424,7 +425,7 @@ const Chessboard = forwardRef<
         setActiveTimer(game.current.turn === "w" ? "white" : "black");
       }
     };
-    
+
     document.addEventListener('fen-applied', handleFenApplied);
     return () => {
       document.removeEventListener('fen-applied', handleFenApplied);
@@ -875,22 +876,22 @@ const LocalGame = () => {
         setFenError(validation.error || "Invalid FEN format");
         return;
       }
-      
+
       // Reset the game state
       if (chessboardRef.current) {
         chessboardRef.current.resetGame();
       }
-      
+
       // Load the new FEN
       gameRef.current.loadFEN(fenInput);
-      
+
       // Update board state
       if (chessboardRef.current) {
         // Force a refresh of the board
         const event = new CustomEvent('fen-applied', { detail: fenInput });
         document.dispatchEvent(event);
       }
-      
+
       setFenError(null);
     } catch (error) {
       setFenError("Error applying FEN: " + (error instanceof Error ? error.message : String(error)));
@@ -930,13 +931,13 @@ const LocalGame = () => {
             <div className="w-full justify-center items-center flex flex-row">
               <ThemeSettings />
             </div>
-            
+
             {/* FEN Input Section */}
             <div className="w-full mt-6">
               <h3 className="text-[2vh] font-semibold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
                 FEN Position
               </h3>
-              
+
               {/* FEN Input Field */}
               <div className="flex flex-col gap-2 mb-4">
                 <input
@@ -949,7 +950,7 @@ const LocalGame = () => {
                   placeholder="Enter FEN string"
                   className="w-full px-3 py-2 bg-gray-900/80 rounded-lg border-[0.2vh] border-purple-500/40 text-white placeholder-gray-400 text-sm"
                 />
-                
+
                 <div className="flex gap-2">
                   <button
                     onClick={applyFen}
@@ -964,14 +965,14 @@ const LocalGame = () => {
                     {copySuccess ? "Copied!" : "Copy Current FEN"}
                   </button>
                 </div>
-                
+
                 {fenError && (
                   <div className="text-red-400 text-sm mt-1 px-2 py-1 bg-red-500/10 rounded border border-red-500/30">
                     {fenError}
                   </div>
                 )}
               </div>
-              
+
               {/* FEN Presets */}
               <div className="mb-4">
                 <h4 className="text-[1.8vh] font-medium text-purple-300 mb-2">Common Positions</h4>
@@ -1014,7 +1015,7 @@ const LocalGame = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Custom scrollbar styles */}
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
