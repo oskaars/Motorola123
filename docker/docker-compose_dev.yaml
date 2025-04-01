@@ -8,12 +8,7 @@ services:
     ports:
       - "3002:3000"
     command: >
-      sh -c "if [ -d /app/.git ]; then \
-                cd /app && git pull; \
-             else \
-                git clone https://github.com/oskaars/Motorola123.git /app; \
-             fi && \
-             cd /app && \
+      sh -c "cd /app && \
              npm install && \
              npm run dev"
     environment:
