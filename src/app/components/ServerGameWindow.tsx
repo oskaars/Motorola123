@@ -12,7 +12,7 @@ type TimeControlType = "blitz" | "rapid" | "classical" | "custom";
 interface TimeControl {
   type: TimeControlType;
   baseTime: number;
-  increment: number; 
+  increment: number;
 }
 
 type ServerGameWindowProps = {
@@ -27,32 +27,44 @@ type ServerGameWindowProps = {
 const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
 };
 
 const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   const [inGame, setInGame] = useState(false);
-  const [serverClient, setServerClient] = useState<UciWebSocketClient | null>(null);
+  const [serverClient, setServerClient] = useState<UciWebSocketClient | null>(
+    null
+  );
   const [game, setGame] = useState<ChessGame | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [gameMessages, setGameMessages] = useState<string[]>([]);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [connectionLost, setConnectionLost] = useState<boolean>(false);
   const [gameMoves, setGameMoves] = useState<string[]>([]);
-  const [engineType, setEngineType] = useState<EngineType>(initialSettings?.type || "Minimax");
-  const [useOpeningBook, setUseOpeningBook] = useState<boolean>(initialSettings?.useBook || false);
-  const [searchDepth, setSearchDepth] = useState<number>(initialSettings?.depth || 5);
-  
+  const [engineType, setEngineType] = useState<EngineType>(
+    initialSettings?.type || "Minimax"
+  );
+  const [useOpeningBook, setUseOpeningBook] = useState<boolean>(
+    initialSettings?.useBook || false
+  );
+  const [searchDepth, setSearchDepth] = useState<number>(
+    initialSettings?.depth || 5
+  );
+
   const [timeControl, setTimeControlState] = useState<TimeControl>(
-    initialSettings?.timeControl || 
-    { type: "rapid", baseTime: 600, increment: 5 }
+    initialSettings?.timeControl || {
+      type: "rapid",
+      baseTime: 600,
+      increment: 5,
+    }
   );
   const [whiteTime, setWhiteTime] = useState<number>(timeControl.baseTime);
   const [blackTime, setBlackTime] = useState<number>(timeControl.baseTime);
   const [clockRunning, setClockRunning] = useState<boolean>(false);
   const [lastMoveTime, setLastMoveTime] = useState<number>(0);
   const clockIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const currentPlayerRef = useRef<'w' | 'b'>('w');
+  const currentPlayerRef = useRef<"w" | "b">("w");
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialSettings?.timeControl) {
@@ -60,7 +72,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       setWhiteTime(initialSettings.timeControl.baseTime);
       setBlackTime(initialSettings.timeControl.baseTime);
     }
-    
+
     if (initialSettings) {
       setEngineType(initialSettings.type);
       setUseOpeningBook(initialSettings.useBook);
@@ -84,7 +96,9 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         if (!serverClient.isConnected() && inGame && !connectionLost) {
           console.error("WebSocket connection lost");
           setConnectionLost(true);
-          setConnectionError("Connection to chess engine lost. The game cannot continue.");
+          setConnectionError(
+            "Connection to chess engine lost. The game cannot continue."
+          );
           stopClock();
           setGame(null);
         }
@@ -100,29 +114,42 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     } else {
       stopClock();
     }
-    
+
     return () => stopClock();
   }, [clockRunning, game?.turn, serverClient]);
 
-  const startClock = (player: 'w' | 'b') => {
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+  }, [gameMessages]);
+
+  const startClock = (player: "w" | "b") => {
     stopClock();
     currentPlayerRef.current = player;
-    
+
     clockIntervalRef.current = setInterval(() => {
-      if (player === 'w') {
-        setWhiteTime(prev => {
+      if (player === "w") {
+        setWhiteTime((prev) => {
           if (prev <= 0) {
             stopClock();
-            setGameMessages(prev => [...prev, "Time's up! Black wins on time."]);
+            setGameMessages((prev) => [
+              ...prev,
+              "Time's up! Black wins on time.",
+            ]);
             return 0;
           }
           return prev - 0.1;
         });
       } else {
-        setBlackTime(prev => {
+        setBlackTime((prev) => {
           if (prev <= 0) {
             stopClock();
-            setGameMessages(prev => [...prev, "Time's up! White wins on time."]);
+            setGameMessages((prev) => [
+              ...prev,
+              "Time's up! White wins on time.",
+            ]);
             return 0;
           }
           return prev - 0.1;
@@ -150,11 +177,13 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       setInGame(true);
 
       const client = new UciWebSocketClient("", "ws://127.0.0.1:3100/ws");
-      
+
       client.onConnectionLost(() => {
         console.error("WebSocket connection lost");
         setConnectionLost(true);
-        setConnectionError("Connection to chess engine lost. The game cannot continue.");
+        setConnectionError(
+          "Connection to chess engine lost. The game cannot continue."
+        );
         stopClock();
         setGame(null);
       });
@@ -168,30 +197,38 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
 
       const newGame = new ChessGame();
       setGame(newGame);
-      
+
       setGameMessages([
         "Game started! You are playing as White against the server.",
         `Engine type: ${engineType}`,
         `Opening book: ${useOpeningBook ? "Enabled" : "Disabled"}`,
         `Search depth: ${searchDepth}`,
-        `Time control: ${formatTimeControlName(timeControl.type)} (${timeControl.baseTime/60} min + ${timeControl.increment} sec)`,
+        `Time control: ${formatTimeControlName(timeControl.type)} (${
+          timeControl.baseTime / 60
+        } min + ${timeControl.increment} sec)`,
       ]);
 
       setClockRunning(true);
       setLastMoveTime(Date.now());
     } catch (error) {
       console.error("Failed to initialize server connection:", error);
-      setConnectionError("Failed to connect to chess engine server. Please try again.");
+      setConnectionError(
+        "Failed to connect to chess engine server. Please try again."
+      );
       setGameMessages(["Failed to connect to server. Please try again."]);
     }
   };
 
   const formatTimeControlName = (type: TimeControlType): string => {
     switch (type) {
-      case 'blitz': return 'Blitz';
-      case 'rapid': return 'Rapid';
-      case 'classical': return 'Classical';
-      case 'custom': return 'Custom';
+      case "blitz":
+        return "Blitz";
+      case "rapid":
+        return "Rapid";
+      case "classical":
+        return "Classical";
+      case "custom":
+        return "Custom";
     }
   };
 
@@ -217,8 +254,8 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   };
 
   const setEngineSettings = async (
-    type: EngineType, 
-    useBook: boolean, 
+    type: EngineType,
+    useBook: boolean,
     depth: number
   ) => {
     setEngineType(type);
@@ -226,15 +263,18 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     setSearchDepth(depth);
 
     try {
-      const currentSettings = localStorage.getItem('engineSettings');
+      const currentSettings = localStorage.getItem("engineSettings");
       if (currentSettings) {
         const parsedSettings = JSON.parse(currentSettings);
-        localStorage.setItem('engineSettings', JSON.stringify({
-          ...parsedSettings,
-          type,
-          useBook,
-          depth
-        }));
+        localStorage.setItem(
+          "engineSettings",
+          JSON.stringify({
+            ...parsedSettings,
+            type,
+            useBook,
+            depth,
+          })
+        );
       }
     } catch (e) {
       console.error("Error updating localStorage engine settings:", e);
@@ -245,17 +285,25 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         await applyEngineSettings();
         setGameMessages((prev) => [
           ...prev,
-          `Engine settings updated: ${type} engine, ${useBook ? "with" : "without"} opening book, depth ${depth}`,
+          `Engine settings updated: ${type} engine, ${
+            useBook ? "with" : "without"
+          } opening book, depth ${depth}`,
         ]);
       } catch (error) {
         console.error("Failed to update engine settings:", error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        setGameMessages((prev) => [...prev, `Failed to update engine settings: ${errorMessage}`]);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        setGameMessages((prev) => [
+          ...prev,
+          `Failed to update engine settings: ${errorMessage}`,
+        ]);
       }
     } else {
       setGameMessages((prev) => [
         ...prev,
-        `Engine settings will be applied when game starts: ${type} engine, ${useBook ? "with" : "without"} opening book, depth ${depth}`,
+        `Engine settings will be applied when game starts: ${type} engine, ${
+          useBook ? "with" : "without"
+        } opening book, depth ${depth}`,
       ]);
     }
   };
@@ -263,15 +311,18 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   const setTimeControl = (newTimeControl: TimeControl) => {
     console.log(`Setting time control: ${JSON.stringify(newTimeControl)}`);
     setTimeControlState(newTimeControl);
-    
+
     try {
-      const currentSettings = localStorage.getItem('engineSettings');
+      const currentSettings = localStorage.getItem("engineSettings");
       if (currentSettings) {
         const parsedSettings = JSON.parse(currentSettings);
-        localStorage.setItem('engineSettings', JSON.stringify({
-          ...parsedSettings,
-          timeControl: newTimeControl
-        }));
+        localStorage.setItem(
+          "engineSettings",
+          JSON.stringify({
+            ...parsedSettings,
+            timeControl: newTimeControl,
+          })
+        );
       }
     } catch (_) {
       console.error("Error updating localStorage time control:", _);
@@ -290,8 +341,8 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
 
     const now = Date.now();
     setLastMoveTime(now);
-    
-    setWhiteTime(prev => prev + timeControl.increment);
+
+    setWhiteTime((prev) => prev + timeControl.increment);
     setGameMessages((prev) => [...prev, `Your move: ${from}${to}`]);
 
     if (game.isCheckmate()) {
@@ -315,7 +366,8 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         await serverClient.sendCommand(positionCommand);
       } catch (error) {
         console.error("Error setting position:", error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to set position: ${errorMessage}`);
       }
 
@@ -324,16 +376,19 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         btime: Math.round(blackTime * 1000),
         winc: timeControl.increment * 1000,
         binc: timeControl.increment * 1000,
-        depth: searchDepth
+        depth: searchDepth,
       };
 
       if (blackTime < 5) {
         timeControlParams.movetime = 500;
       } else if (blackTime < 15) {
-        timeControlParams.movetime = 1000; 
+        timeControlParams.movetime = 1000;
       }
-      
-      console.log(`Sending search command with time control: `, timeControlParams);
+
+      console.log(
+        `Sending search command with time control: `,
+        timeControlParams
+      );
 
       let bestMove;
       try {
@@ -344,16 +399,21 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
 
         const safeStringify = (obj: unknown) => {
           try {
-            return JSON.stringify(obj, (key, value) => 
-              key === 'stack' || key === 'message' ? String(value) : value, 2);
+            return JSON.stringify(
+              obj,
+              (key, value) =>
+                key === "stack" || key === "message" ? String(value) : value,
+              2
+            );
           } catch (e) {
             return String(obj);
           }
         };
-        
+
         console.error("Error details:", safeStringify(error));
-        
-        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         throw new Error(`Search failed: ${errorMessage}`);
       }
 
@@ -376,10 +436,13 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         const serverMoveNotation = `${serverFrom}${serverTo}`;
         const allMoves = [...updatedMoves, serverMoveNotation];
         setGameMoves(allMoves);
-        
-        setBlackTime(prev => prev + timeControl.increment);
 
-        setGameMessages((prev) => [...prev, `Server move: ${serverFrom}${serverTo}`]);
+        setBlackTime((prev) => prev + timeControl.increment);
+
+        setGameMessages((prev) => [
+          ...prev,
+          `Server move: ${serverFrom}${serverTo}`,
+        ]);
 
         setGame(new ChessGame(game.toFEN()));
 
@@ -394,24 +457,32 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     } catch (error) {
       console.error("Error getting server move:", error);
 
-      const isErrorWithMessage = (err: unknown): err is Error => 
-        typeof err === 'object' && err !== null && 'message' in err;
-      
-      const errorMessage = isErrorWithMessage(error) ? error.message : String(error);
-      setGameMessages((prev) => [...prev, `Error getting server's move: ${errorMessage}`]);
-    
+      const isErrorWithMessage = (err: unknown): err is Error =>
+        typeof err === "object" && err !== null && "message" in err;
+
+      const errorMessage = isErrorWithMessage(error)
+        ? error.message
+        : String(error);
+      setGameMessages((prev) => [
+        ...prev,
+        `Error getting server's move: ${errorMessage}`,
+      ]);
+
       if (isErrorWithMessage(error) && error.stack) {
         console.error("Error stack:", error.stack);
       }
-    
+
       if (
-        isErrorWithMessage(error) && 
+        isErrorWithMessage(error) &&
         typeof error.message === "string" &&
         (error.message.includes("connection") ||
-         error.message.includes("timeout") ||
-         error.message.includes("WebSocket"))
+          error.message.includes("timeout") ||
+          error.message.includes("WebSocket"))
       ) {
-        setGameMessages((prev) => [...prev, "Attempting to reconnect to server..."]);
+        setGameMessages((prev) => [
+          ...prev,
+          "Attempting to reconnect to server...",
+        ]);
         await handleStartGame();
       }
     } finally {
@@ -488,7 +559,9 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       </div>
 
       <div className="mt-2">
-        <h3 className="text-sm font-medium text-purple-300 mb-2">Search Depth: {searchDepth}</h3>
+        <h3 className="text-sm font-medium text-purple-300 mb-2">
+          Search Depth: {searchDepth}
+        </h3>
         <input
           type="range"
           min="1"
@@ -510,10 +583,14 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         </div>
       </div>
       <div className="mt-4">
-        <h3 className="text-sm font-medium text-purple-300 mb-2">Time Control</h3>
+        <h3 className="text-sm font-medium text-purple-300 mb-2">
+          Time Control
+        </h3>
         <div className="grid grid-cols-3 gap-2">
           <button
-            onClick={() => setTimeControl({ type: "blitz", baseTime: 180, increment: 2 })}
+            onClick={() =>
+              setTimeControl({ type: "blitz", baseTime: 180, increment: 2 })
+            }
             className={`px-3 py-2 rounded-lg border-2 transition-all ${
               timeControl.type === "blitz"
                 ? "bg-purple-500/40 border-purple-500 text-white"
@@ -524,9 +601,11 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
             <br />
             <span className="text-xs">(3+2)</span>
           </button>
-          
+
           <button
-            onClick={() => setTimeControl({ type: "rapid", baseTime: 600, increment: 5 })}
+            onClick={() =>
+              setTimeControl({ type: "rapid", baseTime: 600, increment: 5 })
+            }
             className={`px-3 py-2 rounded-lg border-2 transition-all ${
               timeControl.type === "rapid"
                 ? "bg-purple-500/40 border-purple-500 text-white"
@@ -537,9 +616,15 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
             <br />
             <span className="text-xs">(10+5)</span>
           </button>
-          
+
           <button
-            onClick={() => setTimeControl({ type: "classical", baseTime: 1800, increment: 10 })}
+            onClick={() =>
+              setTimeControl({
+                type: "classical",
+                baseTime: 1800,
+                increment: 10,
+              })
+            }
             className={`px-3 py-2 rounded-lg border-2 transition-all ${
               timeControl.type === "classical"
                 ? "bg-purple-500/40 border-purple-500 text-white"
@@ -597,7 +682,9 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
               ) : (
                 <>
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-                  <p className="text-purple-300 mt-4">Initializing chess engine...</p>
+                  <p className="text-purple-300 mt-4">
+                    Initializing chess engine...
+                  </p>
                   {connectionError && (
                     <div className="mt-4 text-red-400 text-center max-w-md p-3 bg-black/30 rounded-lg">
                       <p>{connectionError}</p>
@@ -614,22 +701,6 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
             </div>
           ) : (
             <>
-              <div className="w-full max-w-[600px] flex justify-between mb-4">
-                <div className={`px-4 py-2 rounded-lg ${
-                  game.turn === 'b' && clockRunning ? 'bg-purple-500/40 text-white' : 'bg-gray-800/40 text-gray-300'
-                }`}>
-                  <p className="text-sm">Black</p>
-                  <p className="text-xl font-mono">{formatTime(blackTime)}</p>
-                </div>
-                
-                <div className={`px-4 py-2 rounded-lg ${
-                  game.turn === 'w' && clockRunning ? 'bg-purple-500/40 text-white' : 'bg-gray-800/40 text-gray-300'
-                }`}>
-                  <p className="text-sm">White</p>
-                  <p className="text-xl font-mono">{formatTime(whiteTime)}</p>
-                </div>
-              </div>
-            
               <ServerChessboard
                 game={game}
                 onPlayerMove={handlePlayerMove}
@@ -643,30 +714,101 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
           )}
         </div>
       </div>
-      <div className="w-full lg:w-[40vw] h-fit mt-[2vh] flex justify-center items-start">
-        <div className="w-full bg-gray-900/50 border-[0.4vh] lg:mt-[10vh] h-full border-[#5c085a]/50 rounded-xl p-4 shadow-xl backdrop-blur-sm relative z-99 flex flex-col py-[5vh] gap-8">
+      <div className="w-full lg:w-[40vw] h-full flex justify-center mt-[2vh] items-start">
+        <div className="w-full bg-gray-900/50 border-[0.4vh] h-full border-[#5c085a]/50 rounded-xl p-4 shadow-xl backdrop-blur-sm relative z-99 flex flex-col py-[2vh] gap-8">
           <ThemeSettings />
 
           {game && (
             <div className="bg-gray-800/30 p-3 rounded-lg">
-              <h3 className="text-sm font-medium text-purple-200">Current Settings</h3>
+              <h3 className="text-sm font-medium text-purple-200">
+                Current Settings
+              </h3>
               <p className="text-xs text-gray-300">Engine: {engineType}</p>
-              <p className="text-xs text-gray-300">Opening Book: {useOpeningBook ? "Enabled" : "Disabled"}</p>
-              <p className="text-xs text-gray-300">Search Depth: {searchDepth}</p>
               <p className="text-xs text-gray-300">
-                Time Control: {formatTimeControlName(timeControl.type)} ({timeControl.baseTime/60}+{timeControl.increment})
+                Opening Book: {useOpeningBook ? "Enabled" : "Disabled"}
+              </p>
+              <p className="text-xs text-gray-300">
+                Search Depth: {searchDepth}
+              </p>
+              <p className="text-xs text-gray-300">
+                Time Control: {formatTimeControlName(timeControl.type)} (
+                {timeControl.baseTime / 60}+{timeControl.increment})
               </p>
             </div>
           )}
 
           <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-bold text-purple-300">Game Messages</h2>
-            <div className="bg-gray-800/50 p-4 rounded-lg max-h-[30vh] overflow-y-auto">
-              {gameMessages.map((msg, idx) => (
-                <p key={idx} className="text-gray-300 mb-2">{msg}</p>
-              ))}
+            <div className="bg-gray-900/80 p-4 rounded-lg shadow-md border border-purple-500/40 flex flex-col h-[40vh]">
+              <h3 className="text-lg font-bold mb-2 text-purple-300">
+                Game Messages
+              </h3>
+              <div
+                ref={messagesContainerRef}
+                className="flex-grow overflow-y-auto mb-4 custom-scrollbar"
+              >
+                <div className="space-y-2">
+                  {gameMessages.map((message, index) => {
+                    // Handle move messages
+                    if (
+                      message.includes("Your move:") ||
+                      message.includes("Server move:")
+                    ) {
+                      const [player, moveInfo] = message.split(": ");
+                      const isPlayerMove = player === "Your move";
+
+                      return (
+                        <div key={index} className="text-sm break-words">
+                          <span className="font-bold">
+                            {isPlayerMove ? "You" : "Server"}
+                          </span>{" "}
+                          moved:
+                          <span
+                            className={`ml-1 px-1.5 py-0.5 rounded ${
+                              isPlayerMove
+                                ? "bg-gray-100 text-gray-900"
+                                : "bg-gray-800 text-white"
+                            }`}
+                          >
+                            {moveInfo}
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    // Default message rendering
+                    return (
+                      <div
+                        key={index}
+                        className="text-sm text-gray-200 break-words"
+                      >
+                        {message}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
+
+          <style jsx>{`
+            .custom-scrollbar::-webkit-scrollbar {
+              width: 8px;
+            }
+
+            .custom-scrollbar::-webkit-scrollbar-track {
+              background: rgba(107, 114, 128, 0.1);
+              border-radius: 4px;
+            }
+
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+              background: rgba(139, 92, 246, 0.3);
+              border-radius: 4px;
+            }
+
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: rgba(139, 92, 246, 0.4);
+            }
+          `}</style>
 
           {game && (
             <button
@@ -676,7 +818,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
               End Game
             </button>
           )}
-          
+
           <Link
             href="/play"
             className="w-full px-6 py-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-[0.3vh] border-red-500/50 rounded-lg text-red-300 font-medium text-lg transition-all duration-300 text-center"

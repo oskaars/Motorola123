@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from "react";
 
 const TEXTS = [
-  "Best chess experience",
-  "Best Chess Bots",
-  "Field Color Changing Feature",
+  "Immersive chess experience",
+  "Customizable board themes",
+  "Play anywhere, anytime",
+  "Elegant, intuitive interface",
 ];
 
 const TypewriterText = () => {

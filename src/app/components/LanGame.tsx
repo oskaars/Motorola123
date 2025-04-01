@@ -1426,7 +1426,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
                       // Handle move messages
                       if (message.includes("moved:")) {
                         const [username, moveInfo] = message.split(" moved: ");
-                        // Set color based on who made the move
+                        // Set color based on the username of who made the move
                         const isWhiteMove =
                           username === playerInfo.white.username;
 
@@ -1436,8 +1436,8 @@ const Chessboard: React.FC<ChessboardProps> = ({
                             <span
                               className={`ml-1 px-1.5 py-0.5 rounded ${
                                 isWhiteMove
-                                  ? "bg-gray-100 text-gray-900" // White player's moves
-                                  : "bg-gray-800 text-white" // Black player's moves
+                                  ? "bg-gray-100 text-gray-900" // White background for white's moves
+                                  : "bg-gray-800 text-white" // Black background for black's moves
                               }`}
                             >
                               {moveInfo}
@@ -1446,7 +1446,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
                         );
                       }
 
-                      // Handle chat messages
+                      // Handle regular chat messages
                       if (message.includes(":")) {
                         const [username, text] = message.split(":");
                         return (

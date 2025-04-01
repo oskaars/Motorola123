@@ -1,7 +1,41 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { ChessGame, PieceSymbol, Square } from "@/app/utils/chess";
+import {
+  ChessGame,
+  PieceSymbol,
+  Square,
+  algebraicToCoords,
+} from "@/app/utils/chess";
 import { useTheme } from "@/context/ThemeContext";
+
+const playSound = (
+  piece: PieceSymbol | " " | null,
+  isCapture: boolean = false
+) => {
+  if (isCapture) {
+    const captureNum = Math.floor(Math.random() * 3) + 1;
+    const audio = new Audio(`/sounds/zbicie${captureNum}.mp3`);
+    audio.play();
+    return;
+  }
+
+  if (!piece || piece === " ") return;
+
+  const soundMap: Record<string, string> = {
+    p: "pawn.mp3",
+    n: "knight.mp3",
+    b: "bishop.mp3",
+    r: "rook.mp3",
+    q: "queen.mp3",
+    k: "king.mp3",
+  };
+
+  const soundFile = soundMap[piece.toLowerCase()];
+  if (soundFile) {
+    const audio = new Audio(`/sounds/${soundFile}`);
+    audio.play();
+  }
+};
 
 interface ServerChessboardProps {
   maxSize?: number;
@@ -80,7 +114,7 @@ const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
         {username}
       </span>
       {isThinking && color === "black" && (
-        <span className="text-yellow-300 text-[1.8vh] animate-pulse ml-2">
+        <span className="text-blue-500 font-bold text-[1.8vh] animate-pulse ml-2">
           Thinking...
         </span>
       )}
@@ -119,10 +153,12 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
 }) => {
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
+  const prevBoardRef = useRef(game.board.map((row) => [...row]));
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
   const [isCheckmate, setIsCheckmate] = useState<boolean>(false);
-  const { lightColor, darkColor, highlightColor, PossibleMoveColor } = useTheme();
+  const { lightColor, darkColor, highlightColor, PossibleMoveColor } =
+    useTheme();
 
   const [capturedPieces, setCapturedPieces] = useState<{
     white: string[];
@@ -131,6 +167,13 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
     white: [],
     black: [],
   });
+
+  const [showPromotion, setShowPromotion] = useState<boolean>(false);
+  const [promotionSquare, setPromotionSquare] = useState<Square | null>(null);
+  const [promotionFromSquare, setPromotionFromSquare] = useState<Square | null>(
+    null
+  );
+  const PROMOTION_PIECES: PieceSymbol[] = ["q", "r", "b", "n"];
 
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
@@ -203,12 +246,129 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
     }
   }, [game]);
 
+  useEffect(() => {
+    // Check if it's a server move (black's turn)
+    if (game.turn === "b") {
+      let from: Square | null = null;
+      let to: Square | null = null;
+      let movedPiece: PieceSymbol | " " = " ";
+      let wasCapture = false;
+
+      // Find the differences between previous and current board
+      for (let rowIndex = 0; rowIndex < 8; rowIndex++) {
+        for (let colIndex = 0; colIndex < 8; colIndex++) {
+          const currentPiece = game.board[rowIndex][colIndex];
+          const prevPiece = prevBoardRef.current[rowIndex][colIndex];
+
+          if (currentPiece !== prevPiece) {
+            const square = `${files[colIndex]}${ranks[rowIndex]}` as Square;
+            if (prevPiece !== " ") {
+              from = square;
+              movedPiece = prevPiece as PieceSymbol;
+            }
+            if (currentPiece !== " ") {
+              to = square;
+            }
+            // Check if a piece was captured
+            if (
+              prevPiece !== " " &&
+              currentPiece !== " " &&
+              prevPiece.toLowerCase() !== currentPiece.toLowerCase()
+            ) {
+              wasCapture = true;
+            }
+          }
+        }
+      }
+
+      // Play appropriate sound
+      if (wasCapture) {
+        playSound(null, true); // Capture sound
+      } else if (movedPiece !== " ") {
+        playSound(movedPiece); // Piece-specific sound
+      }
+    }
+
+    // Update the board reference
+    prevBoardRef.current = game.board.map((row) => [...row]);
+  }, [game.board, game.turn]);
+
+  const handlePromotion = (promotionPiece: PieceSymbol) => {
+    if (!promotionFromSquare || !promotionSquare) {
+      console.error("Missing promotion squares");
+      return;
+    }
+
+    const targetPiece = game.getPiece(promotionSquare);
+    const moveResult = game.makeMove(
+      promotionFromSquare,
+      promotionSquare,
+      promotionPiece
+    );
+
+    if (moveResult) {
+      // Play appropriate sound
+      if (targetPiece && targetPiece !== " ") {
+        playSound(null, true); // Capture sound
+      } else {
+        playSound(promotionPiece); // Piece movement sound
+      }
+
+      // Handle capture if any
+      if (targetPiece && targetPiece !== " ") {
+        const isWhitePiece = targetPiece === targetPiece.toUpperCase();
+        setCapturedPieces((prev) => ({
+          ...prev,
+          [isWhitePiece ? "black" : "white"]: [
+            ...prev[isWhitePiece ? "black" : "white"],
+            targetPiece,
+          ],
+        }));
+      }
+
+      onPlayerMove(promotionFromSquare, promotionSquare);
+      setSelectedSquare(null);
+      setPossibleMoves([]);
+      setShowPromotion(false);
+    }
+
+    setPromotionSquare(null);
+    setPromotionFromSquare(null);
+  };
+
   const handleSquareClick = (square: Square) => {
     if (isCheckmate || isThinking || game.turn !== "w") return;
 
     if (selectedSquare) {
       if (possibleMoves.includes(square)) {
+        const piece = game.getPiece(selectedSquare);
+        if (piece && piece.toLowerCase() === "p") {
+          const startCoords = algebraicToCoords(selectedSquare);
+          const endCoords = algebraicToCoords(square);
+
+          if (startCoords && endCoords) {
+            const isPawn = piece.toLowerCase() === "p";
+            const isLastRank =
+              (game.turn === "w" && endCoords[0] === 0) ||
+              (game.turn === "b" && endCoords[0] === 7);
+
+            if (isPawn && isLastRank) {
+              setPromotionSquare(square);
+              setPromotionFromSquare(selectedSquare);
+              setShowPromotion(true);
+              return;
+            }
+          }
+        }
+
         const targetPiece = game.getPiece(square);
+        const movingPiece = game.getPiece(selectedSquare);
+
+        if (targetPiece && targetPiece !== " ") {
+          playSound(null, true); // Capture sound
+        } else {
+          playSound(movingPiece); // Piece-specific sound
+        }
 
         if (targetPiece && targetPiece !== " ") {
           const isWhitePiece = targetPiece === targetPiece.toUpperCase();
@@ -270,6 +430,49 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
         />
       </div>
 
+      {showPromotion && (
+        <div className="fixed z-[9999] inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-gray-900/90 p-[3vh] rounded-[1vh] shadow-xl border-[0.4vh] border-[#5c085a]/50">
+            <h3 className="text-[2.5vh] font-bold text-center mb-[2vh] bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Choose Promotion Piece
+            </h3>
+            <div className="flex justify-center gap-[2vh]">
+              {PROMOTION_PIECES.map((piece) => {
+                const color = game.turn === "w" ? "White" : "Black";
+                let pieceName = "";
+                switch (piece) {
+                  case "q":
+                    pieceName = "Queen";
+                    break;
+                  case "r":
+                    pieceName = "Rook";
+                    break;
+                  case "b":
+                    pieceName = "Bishop";
+                    break;
+                  case "n":
+                    pieceName = "Knight";
+                    break;
+                }
+                return (
+                  <div
+                    key={piece}
+                    className="w-[8vh] h-[8vh] flex items-center justify-center cursor-pointer rounded-[1vh] border-[0.3vh] border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 hover:border-purple-500/50 transition-all duration-300"
+                    onClick={() => handlePromotion(piece)}
+                  >
+                    <img
+                      src={`/pawns/${color}${pieceName}.svg`}
+                      alt={pieceName}
+                      className="w-[6vh] h-[6vh] transition-transform duration-200 hover:scale-110"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         ref={boardRef}
         className="relative w-[90%]"
@@ -326,7 +529,7 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
                     </div>
                   </div>
                 )}
-                <div className="w-full h-full shadow-lg rounded-sm overflow-hidden">
+                <div className="w-full h-full shadow-lg rounded-[1vh] overflow-hidden">
                   <div className="w-full h-full grid grid-cols-8 grid-rows-8">
                     {game.board.map((row, rowIndex) =>
                       row.map((piece, colIndex) => {
@@ -341,36 +544,50 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
                           <div
                             key={square}
                             id={square}
-                            className={`w-full h-full flex items-center justify-center cursor-pointer transition-all duration-300 ease-out ${
-                              isSelected ? "shadow-glow" : ""
-                            }`}
+                            className={`w-full h-full flex items-center justify-center ${
+                              !isCheckmate && !isThinking && game.turn === "w"
+                                ? "cursor-pointer"
+                                : "cursor-not-allowed"
+                            } transition-all duration-300 ease-out`}
                             style={{
                               backgroundColor:
                                 (rowIndex + colIndex) % 2 === 0
                                   ? lightColor
                                   : darkColor,
+                              position: "relative",
                               ...(isSelected && {
-                                boxShadow: `0 0 15px 2px ${highlightColor}`,
-                                border: `2px solid ${highlightColor}`,
-                                transform: "scale(1.02)",
-                              }),
-                              ...(isMoveableTo && {
-                                backgroundColor: PossibleMoveColor,
+                                outline: `2px solid ${highlightColor}`,
+                                outlineOffset: "-2px",
+                                zIndex: 2,
                               }),
                             }}
-                            data-square={square}
                             onClick={() => handleSquareClick(square)}
                           >
-                            <div
-                              className={`w-full h-full flex items-center justify-center transition-transform duration-200 ease-out ${
-                                isSelected ? "scale-102" : ""
-                              }`}
-                            >
+                            <div className="w-full h-full flex items-center justify-center">
                               {pieceImage && (
                                 <img
                                   src={pieceImage}
                                   alt={piece}
                                   className="w-3/4 h-3/4"
+                                  style={{
+                                    filter:
+                                      "drop-shadow(0 0 1px rgba(0,0,0,0.3))",
+                                  }}
+                                />
+                              )}
+                              {isMoveableTo && (
+                                <div
+                                  className="absolute rounded-full"
+                                  style={{
+                                    width: "33%",
+                                    height: "33%",
+                                    backgroundColor: PossibleMoveColor,
+                                    opacity: 0.6,
+                                    pointerEvents: "none",
+                                    top: "50%",
+                                    left: "50%",
+                                    transform: "translate(-50%, -50%)",
+                                  }}
                                 />
                               )}
                             </div>
