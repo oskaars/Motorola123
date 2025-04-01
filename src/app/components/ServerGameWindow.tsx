@@ -61,7 +61,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   const [whiteTime, setWhiteTime] = useState<number>(timeControl.baseTime);
   const [blackTime, setBlackTime] = useState<number>(timeControl.baseTime);
   const [clockRunning, setClockRunning] = useState<boolean>(false);
-  const [lastMoveTime, setLastMoveTime] = useState<number>(0);
+  const [ setLastMoveTime] = useState<number>(0);
   const clockIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentPlayerRef = useRef<"w" | "b">("w");
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -88,7 +88,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       }
       stopClock();
     };
-  }, []);
+  }, [serverClient]);
 
   useEffect(() => {
     if (serverClient) {
@@ -117,7 +117,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     }
 
     return () => stopClock();
-  }, [clockRunning, game?.turn, serverClient]);
+  }, [clockRunning, game, game.turn, serverClient, startClock]);
 
   useEffect(() => {
     if (messagesContainerRef.current) {
@@ -126,6 +126,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     }
   }, [gameMessages]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const startClock = (player: "w" | "b") => {
     stopClock();
     currentPlayerRef.current = player;
@@ -407,7 +408,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
               2
             );
           } catch (e) {
-            return String(obj);
+            return (String(obj) + e);
           }
         };
 

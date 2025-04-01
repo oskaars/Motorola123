@@ -1,4 +1,4 @@
-"use client";
+"use client";"use client";
 import React, { useState, useEffect, useRef } from "react";
 import {
   ChessGame,
@@ -89,14 +89,14 @@ interface PlayerInfoBarProps {
 }
 
 const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
-  color,
-  username,
-  avatar,
-  isActive,
-  capturedPieces,
-  isThinking,
-  timeRemaining,
-}) => (
+                                                       color,
+                                                       username,
+                                                       avatar,
+                                                       isActive,
+                                                       capturedPieces,
+                                                       isThinking,
+                                                       timeRemaining,
+                                                     }) => (
   <div
     className={`w-full flex items-center justify-between p-[1.5vh] rounded-[1vh] transition-all duration-300 ${
       isActive
@@ -142,15 +142,15 @@ const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
 );
 
 const ServerChessboard: React.FC<ServerChessboardProps> = ({
-  maxSize = 800,
-  minSize = 280,
-  className = "",
-  game,
-  onPlayerMove,
-  isThinking,
-  whiteTimeRemaining,
-  blackTimeRemaining,
-}) => {
+                                                             maxSize = 800,
+                                                             minSize = 280,
+                                                             className = "",
+                                                             game,
+                                                             onPlayerMove,
+                                                             isThinking,
+                                                             whiteTimeRemaining,
+                                                             blackTimeRemaining,
+                                                           }) => {
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
   const prevBoardRef = useRef(game.board.map((row) => [...row]));
@@ -248,7 +248,7 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
 
   useEffect(() => {
     // Check if it's a server move (black's turn)
-    if (game.turn === "b") {
+    if (game.turn === 'b') {
       let from: Square | null = null;
       let to: Square | null = null;
       let movedPiece: PieceSymbol | " " = " ";
@@ -263,10 +263,12 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
           if (currentPiece !== prevPiece) {
             const square = `${files[colIndex]}${ranks[rowIndex]}` as Square;
             if (prevPiece !== " ") {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               from = square;
               movedPiece = prevPiece as PieceSymbol;
             }
             if (currentPiece !== " ") {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               to = square;
             }
             // Check if a piece was captured
@@ -362,7 +364,7 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
         }
 
         const targetPiece = game.getPiece(square);
-        const movingPiece = game.getPiece(selectedSquare);
+        const movingPiece = game.getPiece(selectedSquare) as PieceSymbol | " " | null;
 
         if (targetPiece && targetPiece !== " ") {
           playSound(null, true); // Capture sound
@@ -423,7 +425,7 @@ const ServerChessboard: React.FC<ServerChessboardProps> = ({
           color="black"
           username={playerInfo.black.username}
           avatar={playerInfo.black.avatar}
-          isActive={game.turn === "b"}
+          isActive={game.turn === 'b'}
           capturedPieces={capturedPieces.black}
           isThinking={isThinking}
           timeRemaining={blackTimeRemaining}
