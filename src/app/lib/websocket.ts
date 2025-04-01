@@ -5,17 +5,19 @@ export class WebSocketClient {
   public username: string;
   private listeners: Map<string, ((data: unknown) => void)[]> = new Map();
   private socketReady: boolean = false;
+  private serverUrl: string;
 
   constructor(username: string) {
-    this.username = username; 
-    console.log(`Creating WebSocketClient for user: ${username}`);
-    this.socket = new WebSocket('ws://localhost:8080');
+    this.username = username;
+    this.serverUrl = process.env.WS && process.env.WS.trim() !== '' ? process.env.WS : 'ws://localhost:8080';
+    console.log(`Creating WebSocketClient for user: ${username}, connecting to: ${this.serverUrl}`);
+    this.socket = new WebSocket(this.serverUrl);
     this.setupSocket();
   }
 
   private reconnect() {
     console.log('Attempting to reconnect...');
-    this.socket = new WebSocket('ws://localhost:8080');
+    this.socket = new WebSocket(this.serverUrl);
     this.setupSocket();
   }
 
