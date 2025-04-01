@@ -10,11 +10,10 @@ export class WebSocketClient {
   constructor(username: string) {
     this.username = username;
 
-    // Sprawdź, czy klient łączy się z lokalnej domeny
     const isNotLocal = window.location.origin === 'https://gambit.plus' || window.location.origin === 'https://dev.gambit.plus';
 
-    // Ustaw adres serwera WebSocket w zależności od domeny
-    this.serverUrl = isNotLocal ? 'ws://api.gambit.plus:80' : 'ws://localhost:8080';
+    // this.serverUrl = isNotLocal ? 'ws://api.gambit.plus:80' : 'ws://localhost:8080';
+    this.serverUrl = 'ws://api.gambit.plus:80';
 
     console.log(`Creating WebSocketClient for user: ${username}, connecting to: ${this.serverUrl}`);
     this.socket = new WebSocket(this.serverUrl);
