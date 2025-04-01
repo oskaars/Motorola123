@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from "react";
 import { FaBrain, FaRobot, FaChessKing } from "react-icons/fa";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type TimeControlType = "blitz" | "rapid" | "classical";
@@ -21,8 +20,6 @@ const ComputerOptions: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const router = useRouter();
   const [hoverOption, setHoverOption] = useState<string | null>(null);
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControlType>("rapid");
-  
-  const [selectedOption, setSelectedOption] = useState<EngineSettings | null>(null);
   
   const timeControls: Record<TimeControlType, { baseTime: number, increment: number }> = {
     blitz: { baseTime: 180, increment: 2 },      // 3+2
@@ -45,8 +42,6 @@ const ComputerOptions: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       baseTime: timeControls[selectedTimeControl].baseTime,
       increment: timeControls[selectedTimeControl].increment
     };
-    
-    setSelectedOption(engineSetting);
     
     localStorage.setItem('engineSettings', JSON.stringify(engineSetting));
     

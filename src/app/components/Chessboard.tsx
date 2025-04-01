@@ -94,14 +94,19 @@ const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
         {username}
       </span>
       <div className="flex gap-[0.5vh] items-center ml-[2vh]">
-        {capturedPieces.map((piece, index) => (
-          <Image
-            key={index}
-            src={getPieceImage(piece as PieceSymbol)}
-            alt={piece}
-            className="w-[2.8vh] h-[2.8vh] opacity-75" // Slightly increased size
-          />
-        ))}
+        {capturedPieces.map((piece, index) => {
+          const pieceImage = getPieceImage(piece as PieceSymbol);
+          return pieceImage ? (
+            <Image
+              key={index}
+              src={pieceImage}
+              alt={piece}
+              width={28}
+              height={28}
+              className="opacity-75"
+            />
+          ) : null;
+        })}
       </div>
     </div>
     <div
@@ -219,7 +224,7 @@ const Chessboard = forwardRef<{ resetGame: () => void }, ChessboardProps>(
     }, [selectedTimeOption]);
 
     // Player info (could be updated via context or props)
-    const [playerInfo, setPlayerInfo] = useState({
+    const [playerInfo] = useState({
       white: { username: "White", avatar: "/pawns/WhiteKing.svg" },
       black: { username: "Black", avatar: "/pawns/BlackKing.svg" },
     });
@@ -421,19 +426,6 @@ const Chessboard = forwardRef<{ resetGame: () => void }, ChessboardProps>(
 
     const isPossibleMove = (square: Square): boolean => {
       return possibleMoves.includes(square);
-    };
-
-    const createRoom = () => {
-      if (wsClient) {
-        wsClient.createRoom();
-      }
-    };
-
-    const joinRoom = () => {
-      const inputRoomId = prompt("Enter room ID:");
-      if (inputRoomId && wsClient) {
-        wsClient.joinRoom(inputRoomId);
-      }
     };
 
     const resetGame = () => {

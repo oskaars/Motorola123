@@ -1,4 +1,3 @@
-// src/api/engine.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { ChessGame } from '@/app/utils/chess';
 import { UciWebSocketClient, TimeControlParams } from '@/app/lib/ws-client';

@@ -1,8 +1,9 @@
+// Replace Function types with proper TypeScript types
 export class WebSocketClient {
   private socket: WebSocket;
   private roomId: string | null = null;
   public username: string;
-  private eventHandlers: { [key: string]: Function[] } = {};
+  private listeners: Map<string, ((data: unknown) => void)[]> = new Map();
   private socketReady: boolean = false;
 
   constructor(username: string) {
@@ -22,7 +23,7 @@ export class WebSocketClient {
     this.socket.onopen = () => {
       console.log('WebSocket connected');
       this.socketReady = true;
-      this.triggerEvent('SOCKET_READY', {});
+      this.dispatchEvent('SOCKET_READY', {});
     };
 
     this.socket.onmessage = (event) => this.onMessage(event);
@@ -54,29 +55,31 @@ export class WebSocketClient {
         this.roomId = data.roomId;
         console.log(`Set roomId to ${this.roomId}`);
       }
-      if (this.eventHandlers[data.type]) {
-        this.eventHandlers[data.type].forEach(handler => handler(data));
+      if (this.listeners.has(data.type)) {
+        this.listeners.get(data.type)!.forEach(handler => handler(data));
       }
     } catch (error) {
       console.error('Error processing message:', error);
     }
   }
 
-  private triggerEvent(type: string, data: any) {
-    const handlers = this.eventHandlers[type] || [];
-    handlers.forEach(handler => handler(data));
-  }
-
-  addEventListener(event: string, handler: Function) {
-    if (!this.eventHandlers[event]) {
-      this.eventHandlers[event] = [];
+  private dispatchEvent(event: string, data: unknown): void {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event)!.forEach(callback => callback(data));
     }
-    this.eventHandlers[event].push(handler);
   }
 
-  removeEventListener(event: string, handler: Function) {
-    if (this.eventHandlers[event]) {
-      this.eventHandlers[event] = this.eventHandlers[event].filter(h => h !== handler);
+  addEventListener(event: string, callback: (data: unknown) => void): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event)!.push(callback);
+  }
+
+  removeEventListener(event: string, callback: (data: unknown) => void): void {
+    if (this.listeners.has(event)) {
+      const callbacks = this.listeners.get(event)!;
+      this.listeners.set(event, callbacks.filter(cb => cb !== callback));
     }
   }
 

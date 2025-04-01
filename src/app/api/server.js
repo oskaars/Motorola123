@@ -1,6 +1,6 @@
-const WebSocket = require('ws');
+import { WebSocketServer } from 'ws';
 
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocketServer({ port: 8080 });
 let rooms = {};
 
 wss.on('connection', (ws) => {
@@ -13,7 +13,7 @@ wss.on('connection', (ws) => {
       console.log('Received message:', data);
       
       switch (data.type) {
-        case 'CREATE_ROOM':
+        case 'CREATE_ROOM': {
           const roomId = Math.random().toString(36).substring(2, 7);
           rooms[roomId] = [{ ws, username: data.username }];
           rooms[roomId].timeInSeconds = data.timeInSeconds || 600;
@@ -26,6 +26,7 @@ wss.on('connection', (ws) => {
             timeInSeconds: rooms[roomId].timeInSeconds
           }));
           break;
+        }
 
         case 'JOIN_ROOM':
           if (rooms[data.roomId]) {

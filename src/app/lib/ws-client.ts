@@ -136,7 +136,7 @@ export class UciWebSocketClient {
     if (!this.connected || !this.ws || !this.clientId) {
       try {
         await this.connect();
-      } catch (error) {
+      } catch (_) {
         return Promise.reject(new Error("Failed to connect to WebSocket server"));
       }
     }

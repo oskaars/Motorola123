@@ -17,6 +17,12 @@ interface EngineSettings {
   };
 }
 
+interface EngineControlProps {
+  onSettingsChange?: (settings: EngineSettings) => void;
+  initialSettings?: EngineSettings;
+  disabled?: boolean;
+}
+
 export default function EngineControls({ 
   onSettingsChange,
   initialSettings = { 
@@ -30,7 +36,7 @@ export default function EngineControls({
     }
   },
   disabled = false
-}) {
+}: EngineControlProps) {
   const [bestMove, setBestMove] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [engineType, setEngineType] = useState<EngineType>(initialSettings.type);
@@ -59,7 +65,7 @@ export default function EngineControls({
         }
       });
     }
-  }, []);
+  }, [engineType, useOpeningBook, searchDepth, timeControlType, baseTime, increment, onSettingsChange]);
 
   const analyzePosition = async () => {
     setLoading(true);

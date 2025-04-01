@@ -11,8 +11,8 @@ type TimeControlType = "blitz" | "rapid" | "classical" | "custom";
 
 interface TimeControl {
   type: TimeControlType;
-  baseTime: number; // in seconds
-  increment: number; // in seconds
+  baseTime: number;
+  increment: number; 
 }
 
 type ServerGameWindowProps = {
@@ -43,7 +43,6 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   const [useOpeningBook, setUseOpeningBook] = useState<boolean>(initialSettings?.useBook || false);
   const [searchDepth, setSearchDepth] = useState<number>(initialSettings?.depth || 5);
   
-  // Time control states
   const [timeControl, setTimeControlState] = useState<TimeControl>(
     initialSettings?.timeControl || 
     { type: "rapid", baseTime: 600, increment: 5 }
@@ -70,7 +69,6 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   }, [initialSettings]);
 
   useEffect(() => {
-    // Don't auto-start the game, let user choose settings first
     return () => {
       if (serverClient) {
         console.log("Disconnecting from server");
@@ -80,7 +78,6 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     };
   }, []);
 
-  // Add a new effect to monitor WebSocket connection
   useEffect(() => {
     if (serverClient) {
       const checkConnection = setInterval(() => {
@@ -89,7 +86,6 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
           setConnectionLost(true);
           setConnectionError("Connection to chess engine lost. The game cannot continue.");
           stopClock();
-          // Clear game state but keep the error message visible
           setGame(null);
         }
       }, 1000);
@@ -98,7 +94,6 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     }
   }, [serverClient, inGame, connectionLost]);
 
-  // Clock effect
   useEffect(() => {
     if (clockRunning && game) {
       startClock(game.turn);
@@ -107,7 +102,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     }
     
     return () => stopClock();
-  }, [clockRunning, game?.turn]);
+  }, [clockRunning, game?.turn, serverClient]);
 
   const startClock = (player: 'w' | 'b') => {
     stopClock();
@@ -152,11 +147,10 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       setGameMoves([]);
       setWhiteTime(timeControl.baseTime);
       setBlackTime(timeControl.baseTime);
-      setInGame(true); // Set inGame to true to show loading state
+      setInGame(true);
 
       const client = new UciWebSocketClient("", "ws://127.0.0.1:3100/ws");
       
-      // Add event handlers for connection events
       client.onConnectionLost(() => {
         console.error("WebSocket connection lost");
         setConnectionLost(true);
@@ -182,8 +176,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         `Search depth: ${searchDepth}`,
         `Time control: ${formatTimeControlName(timeControl.type)} (${timeControl.baseTime/60} min + ${timeControl.increment} sec)`,
       ]);
-      
-      // Start the clock
+
       setClockRunning(true);
       setLastMoveTime(Date.now());
     } catch (error) {
@@ -231,8 +224,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     setEngineType(type);
     setUseOpeningBook(useBook);
     setSearchDepth(depth);
-    
-    // Store in localStorage to persist across sessions
+
     try {
       const currentSettings = localStorage.getItem('engineSettings');
       if (currentSettings) {
@@ -257,7 +249,8 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         ]);
       } catch (error) {
         console.error("Failed to update engine settings:", error);
-        setGameMessages((prev) => [...prev, "Failed to update engine settings: " + error.message]);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setGameMessages((prev) => [...prev, `Failed to update engine settings: ${errorMessage}`]);
       }
     } else {
       setGameMessages((prev) => [
@@ -269,10 +262,8 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
 
   const setTimeControl = (newTimeControl: TimeControl) => {
     console.log(`Setting time control: ${JSON.stringify(newTimeControl)}`);
-    // Update time control state
     setTimeControlState(newTimeControl);
     
-    // Store in localStorage to persist across sessions
     try {
       const currentSettings = localStorage.getItem('engineSettings');
       if (currentSettings) {
@@ -282,8 +273,8 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
           timeControl: newTimeControl
         }));
       }
-    } catch (e) {
-      console.error("Error updating localStorage time control:", e);
+    } catch (_) {
+      console.error("Error updating localStorage time control:", _);
     }
   };
 
@@ -297,12 +288,9 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     const updatedMoves = [...gameMoves, moveNotation];
     setGameMoves(updatedMoves);
 
-    // Apply increment and switch clock
     const now = Date.now();
-    const elapsed = (now - lastMoveTime) / 1000;
     setLastMoveTime(now);
     
-    // Add increment to white's time
     setWhiteTime(prev => prev + timeControl.increment);
     setGameMessages((prev) => [...prev, `Your move: ${from}${to}`]);
 
@@ -327,26 +315,24 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         await serverClient.sendCommand(positionCommand);
       } catch (error) {
         console.error("Error setting position:", error);
-        throw new Error(`Failed to set position: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to set position: ${errorMessage}`);
       }
 
-      // Create time control parameters for the engine
       const timeControlParams: TimeControlParams = {
-        wtime: Math.round(whiteTime * 1000), // convert to ms
-        btime: Math.round(blackTime * 1000), // convert to ms
-        winc: timeControl.increment * 1000,  // convert to ms
-        binc: timeControl.increment * 1000,  // convert to ms
+        wtime: Math.round(whiteTime * 1000),
+        btime: Math.round(blackTime * 1000),
+        winc: timeControl.increment * 1000,
+        binc: timeControl.increment * 1000,
         depth: searchDepth
       };
-      
-      // If time is very low, force a quick move
+
       if (blackTime < 5) {
-        timeControlParams.movetime = 500; // 0.5 seconds for emergency moves
+        timeControlParams.movetime = 500;
       } else if (blackTime < 15) {
-        timeControlParams.movetime = 1000; // 1 second when time is low
+        timeControlParams.movetime = 1000; 
       }
       
-      // Use go command with time control flags
       console.log(`Sending search command with time control: `, timeControlParams);
 
       let bestMove;
@@ -355,8 +341,20 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         console.log("Best move response:", bestMove);
       } catch (error) {
         console.error("Error during engine search:", error);
-        console.error("Error details:", JSON.stringify(error, null, 2));
-        throw new Error(`Search failed: ${error.message || "Unknown error"}`);
+
+        const safeStringify = (obj: unknown) => {
+          try {
+            return JSON.stringify(obj, (key, value) => 
+              key === 'stack' || key === 'message' ? String(value) : value, 2);
+          } catch (e) {
+            return String(obj);
+          }
+        };
+        
+        console.error("Error details:", safeStringify(error));
+        
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Search failed: ${errorMessage}`);
       }
 
       if (!bestMove || bestMove.length < 4 || bestMove === "(none)") {
@@ -379,7 +377,6 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         const allMoves = [...updatedMoves, serverMoveNotation];
         setGameMoves(allMoves);
         
-        // Apply increment to black's time
         setBlackTime(prev => prev + timeControl.increment);
 
         setGameMessages((prev) => [...prev, `Server move: ${serverFrom}${serverTo}`]);
@@ -396,17 +393,23 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       }
     } catch (error) {
       console.error("Error getting server move:", error);
-      setGameMessages((prev) => [...prev, `Error getting server's move: ${error.message || "Unknown error"}`]);
 
-      if (error.stack) {
+      const isErrorWithMessage = (err: unknown): err is Error => 
+        typeof err === 'object' && err !== null && 'message' in err;
+      
+      const errorMessage = isErrorWithMessage(error) ? error.message : String(error);
+      setGameMessages((prev) => [...prev, `Error getting server's move: ${errorMessage}`]);
+    
+      if (isErrorWithMessage(error) && error.stack) {
         console.error("Error stack:", error.stack);
       }
-
+    
       if (
+        isErrorWithMessage(error) && 
         typeof error.message === "string" &&
         (error.message.includes("connection") ||
-          error.message.includes("timeout") ||
-          error.message.includes("WebSocket"))
+         error.message.includes("timeout") ||
+         error.message.includes("WebSocket"))
       ) {
         setGameMessages((prev) => [...prev, "Attempting to reconnect to server..."]);
         await handleStartGame();
@@ -506,8 +509,6 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
           <span>7 (Deep)</span>
         </div>
       </div>
-      
-      {/* Time Control Selection */}
       <div className="mt-4">
         <h3 className="text-sm font-medium text-purple-300 mb-2">Time Control</h3>
         <div className="grid grid-cols-3 gap-2">
@@ -613,7 +614,6 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
             </div>
           ) : (
             <>
-              {/* Chess Clocks */}
               <div className="w-full max-w-[600px] flex justify-between mb-4">
                 <div className={`px-4 py-2 rounded-lg ${
                   game.turn === 'b' && clockRunning ? 'bg-purple-500/40 text-white' : 'bg-gray-800/40 text-gray-300'
