@@ -98,7 +98,7 @@ const NavBar: React.FC = () => {
               color: "white",
             }}
           >
-            Gambit.pl
+            Gambit+
           </Link>
 
           {/* Desktop Menu */}
@@ -140,9 +140,14 @@ const NavBar: React.FC = () => {
             >
               Authors
             </Link>
-            <p className="text-[2vh] hover:cursor-pointer underline-animation motion-delay-[300ms] motion-opacity-in-0 motion-translate-y-in-[4vh] motion-duration-1000">
+            <Link
+              href="https://github.com/oskaars/Motorola123/wiki"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[2vh] hover:cursor-pointer underline-animation motion-delay-[300ms] motion-opacity-in-0 motion-translate-y-in-[4vh] motion-duration-1000"
+            >
               Documentation
-            </p>
+            </Link>
           </div>
 
           {/* Mobile Burger Button */}
@@ -231,9 +236,14 @@ const NavBar: React.FC = () => {
             Authors
           </Link>
 
-          <p className="text-[2.5vh] text-white hover:cursor-pointer underline-animation">
+          <Link
+            href="https://github.com/oskaars/Motorola123/wiki"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[2.5vh] text-white hover:cursor-pointer underline-animation"
+          >
             Documentation
-          </p>
+          </Link>
         </div>
       </div>
 
