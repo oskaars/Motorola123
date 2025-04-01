@@ -4,9 +4,9 @@ import {
   algebraicToCoords,
   ChessGame,
   PieceSymbol,
-  Square,
+  Square
 } from "@/app/utils/chess";
-import { WebSocketClient } from "@/app/lib/websocket";
+import WebSocketClient from "../lib/websocket";
 
 interface ChessboardProps {
   maxSize?: number;
@@ -89,6 +89,8 @@ const PlayerInfoBar = ({
   </div>
 );
 
+PlayerInfoBar.displayName = 'PlayerInfoBar';
+
 const Chessboard: React.FC<ChessboardProps> = ({
   maxSize = 800,
   minSize = 280,
@@ -96,7 +98,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
 }) => {
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
-  const [game, setGame] = useState(() => new ChessGame());
+  const [game] = useState(() => new ChessGame());
   const [boardState, setBoardState] = useState(game.board);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
@@ -135,10 +137,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
     const client = new WebSocketClient(randomUsername);
     setWsClient(client);
 
-    interface RoomCreatedData {
-      roomId: string;
-    }
-
     interface JoinedRoomData {
       roomId: string;
     }
@@ -152,34 +150,33 @@ const Chessboard: React.FC<ChessboardProps> = ({
       sender: string;
       message: string;
     }
-    client.addEventListener(
-      "GAME_OVER",
-      (data: { reason: string; winner: string }) => {
+    client.addEventListener("GAME_OVER", (data: unknown) => {
+        const gameOverData = data as { reason: string; winner: string };
         setIsCheckmate(true);
         setChatMessages((prev) => [
           ...prev,
-          `Game over! ${data.winner} wins by ${data.reason}`,
+          `Game over! ${gameOverData.winner} wins by ${gameOverData.reason}`,
         ]);
         if (timerRef.current) clearInterval(timerRef.current);
       }
     );
 
-    client.addEventListener("RESIGN", (data: { winner: string }) => {
+    client.addEventListener("RESIGN", (data: unknown) => {
+      const resignData = data as { winner: string };
       setIsCheckmate(true);
       setChatMessages((prev) => [
         ...prev,
-        `Game resigned! ${data.winner} wins`,
+        `Game resigned! ${resignData.winner} wins`,
       ]);
       if (timerRef.current) clearInterval(timerRef.current);
     });
-    client.addEventListener(
-      "ROOM_CREATED",
-      (data: { roomId: string; timeInSeconds: number }) => {
+    client.addEventListener("ROOM_CREATED", (data: unknown) => {
+        const roomData = data as { roomId: string; timeInSeconds: number };
         console.log(`Room created event received: ${JSON.stringify(data)}`);
-        setRoomId(data.roomId);
+        setRoomId(roomData.roomId);
         setChatMessages((prev) => [
           ...prev,
-          `Room created! Your room ID is: ${data.roomId}`,
+          `Room created! Your room ID is: ${roomData.roomId}`,
           "Share this ID with your opponent to join the game.",
         ]);
 
@@ -190,37 +187,41 @@ const Chessboard: React.FC<ChessboardProps> = ({
       }
     );
 
-    client.addEventListener("JOINED_ROOM", (data: JoinedRoomData) => {
-      setRoomId(data.roomId);
-      setChatMessages((prev) => [...prev, `You joined room: ${data.roomId}`]);
-      console.log(`Joined room: ${data.roomId}`);
+    client.addEventListener("JOINED_ROOM", (data: unknown) => {
+      const joinedData = data as JoinedRoomData;
+      setRoomId(joinedData.roomId);
+      setChatMessages((prev) => [...prev, `You joined room: ${joinedData.roomId}`]);
+      console.log(`Joined room: ${joinedData.roomId}`);
       client.sendRequestColor();
     });
 
-    client.addEventListener("USER_JOINED", (data: { username: string }) => {
-      setChatMessages((prev) => [...prev, `${data.username} joined the game!`]);
+    client.addEventListener("USER_JOINED", (data: unknown) => {
+      const userData = data as { username: string };
+      setChatMessages((prev) => [...prev, `${userData.username} joined the game!`]);
     });
 
-    client.addEventListener("OPPONENT_MOVE", (data: OpponentMoveData) => {
+    client.addEventListener("OPPONENT_MOVE", (data: unknown) => {
+      const moveData = data as OpponentMoveData;
       console.log(
-        `Received opponent move: ${data.notation} from ${data.sender}`
+        `Received opponent move: ${moveData.notation} from ${moveData.sender}`
       );
 
       let moveResult;
 
-      if (data.notation.length > 4) {
-        const from = data.notation.substring(0, 2);
-        const to = data.notation.substring(2, 4);
-        const promotionPiece = data.notation.substring(4) as PieceSymbol;
+      if (moveData.notation.length > 4) {
+        const from = moveData.notation.substring(0, 2);
+        const to = moveData.notation.substring(2, 4);
+        const promotionPiece = moveData.notation.substring(4) as PieceSymbol;
 
         console.log(
           `Opponent promoting from ${from} to ${to} as ${promotionPiece}`
         );
         moveResult = game.makeMove(from, to, promotionPiece);
       } else {
+        const moveData = data as OpponentMoveData;
         moveResult = game.makeMove(
-          data.notation.substring(0, 2),
-          data.notation.substring(2, 4)
+          moveData.notation.substring(0, 2),
+          moveData.notation.substring(2, 4)
         );
       }
 
@@ -228,7 +229,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         setBoardState(JSON.parse(JSON.stringify(game.board)));
         setChatMessages((prev) => [
           ...prev,
-          `${data.sender} moved: ${data.notation}`,
+          `${(data as OpponentMoveData).sender} moved: ${(data as OpponentMoveData).notation}`,
         ]);
 
         setActiveTimer(game.turn === "w" ? "white" : "black");
@@ -239,25 +240,25 @@ const Chessboard: React.FC<ChessboardProps> = ({
           setChatMessages((prev) => [...prev, "Checkmate!"]);
         }
       } else {
-        console.error(`Failed to make opponent's move: ${data.notation}`);
+        console.error(`Failed to make opponent's move: ${(data as OpponentMoveData).notation}`);
       }
     });
 
-    client.addEventListener("MESSAGE", (data: MessageData) => {
-      setChatMessages((prev) => [...prev, `${data.sender}: ${data.message}`]);
+    client.addEventListener("MESSAGE", (data: unknown) => {
+      const messageData = data as MessageData;
+      setChatMessages((prev) => [...prev, `${messageData.sender}: ${messageData.message}`]);
     });
 
-    client.addEventListener(
-      "COLOR_ASSIGNED",
-      (data: { color: "white" | "black" }) => {
-        setPlayerColor(data.color);
-        setChatMessages((prev) => [
-          ...prev,
-          `You are playing as ${data.color}`,
-        ]);
+    client.addEventListener("COLOR_ASSIGNED", (data: unknown) => {
+    const colorData = data as { color: "white" | "black" };
+      setPlayerColor(colorData.color);
+      setChatMessages((prev) => [
+        ...prev,
+        `You are playing as ${colorData.color}`,
+      ]);
         const playerUsername = client.username;
 
-        if (data.color === "white") {
+        if (colorData.color === "white") {
           setPlayerInfo((prev) => ({
             ...prev,
             white: { ...prev.white, username: playerUsername },
@@ -271,14 +272,13 @@ const Chessboard: React.FC<ChessboardProps> = ({
       }
     );
 
-    client.addEventListener(
-      "GAME_READY",
-      (data: {
+    client.addEventListener("GAME_READY", (data: unknown) => {
+      const gameReadyData = data as {
         whitePlayer: string;
         blackPlayer: string;
         timeInSeconds: number;
-      }) => {
-        if (data.whitePlayer === data.blackPlayer) {
+      };
+        if (gameReadyData.whitePlayer === gameReadyData.blackPlayer) {
           console.error("Server sent invalid player assignment:", data);
           setChatMessages((prev) => [
             ...prev,
@@ -287,9 +287,9 @@ const Chessboard: React.FC<ChessboardProps> = ({
           return;
         }
 
-        if (data.whitePlayer === client.username) {
+        if (gameReadyData.whitePlayer === client.username) {
           setPlayerColor("white");
-        } else if (data.blackPlayer === client.username) {
+        } else if (gameReadyData.blackPlayer === client.username) {
           setPlayerColor("black");
         } else {
           console.error("Player assignment mismatch");
@@ -301,25 +301,26 @@ const Chessboard: React.FC<ChessboardProps> = ({
         }
 
         setGameReady(true);
-        setWhiteTime(data.timeInSeconds);
-        setBlackTime(data.timeInSeconds);
+        setWhiteTime(gameReadyData.timeInSeconds);
+        setBlackTime(gameReadyData.timeInSeconds);
         setActiveTimer("white");
 
         setPlayerInfo({
           white: {
-            username: data.whitePlayer,
+            username: gameReadyData.whitePlayer,
             avatar: "/pawns/WhiteKing.svg",
           },
           black: {
-            username: data.blackPlayer,
+            username: gameReadyData.blackPlayer,
             avatar: "/pawns/BlackKing.svg",
           },
         });
       }
     );
 
-    client.addEventListener("ROOM_FULL", (data: { message: string }) => {
-      setChatMessages((prev) => [...prev, data.message]);
+    client.addEventListener("ROOM_FULL", (data: unknown) => {
+      const roomFullData = data as { message: string };
+      setChatMessages((prev) => [...prev, roomFullData.message]);
       client.sendRequestColor();
     });
 
@@ -403,7 +404,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
       window.removeEventListener("resize", updateSize);
       window.removeEventListener("orientationchange", updateSize);
     };
-  }, [minSize, maxSize]);
+  }, [minSize, maxSize, game, roomId]);
 
   useEffect(() => {
     if (gameReady && roomId) {
@@ -428,7 +429,14 @@ const Chessboard: React.FC<ChessboardProps> = ({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [activeTimer, gameReady]);
+  }, [
+    activeTimer, 
+    gameReady, 
+    roomId, 
+    wsClient, 
+    playerInfo.black.username, 
+    playerInfo.white.username
+  ]);
 
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
@@ -900,6 +908,8 @@ const Chessboard: React.FC<ChessboardProps> = ({
   );
 };
 
+Chessboard.displayName = 'Chessboard';
+
 const PlayerTeamBadge = ({
   playerColor,
 }: {
@@ -920,5 +930,7 @@ const PlayerTeamBadge = ({
     </div>
   );
 };
+
+PlayerTeamBadge.displayName = 'PlayerTeamBadge';
 
 export default Chessboard;
