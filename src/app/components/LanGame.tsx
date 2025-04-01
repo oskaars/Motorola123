@@ -422,7 +422,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
-  const [game] = useState(() => new ChessGame());
+  const [game, setGame] = useState(() => new ChessGame());
   const [boardState, setBoardState] = useState(game.board);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
@@ -480,6 +480,9 @@ const Chessboard: React.FC<ChessboardProps> = ({
     const client = new WebSocketClient(""); // Empty initial username
     setWsClient(client);
 
+    interface RoomCreatedData {
+      roomId: string;
+    }
 
     interface JoinedRoomData {
       roomId: string;
@@ -689,7 +692,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         }
       }
     };
-  }, [game, roomId]);
+  }, []);
 
   // Add cleanup effect
   useEffect(() => {
@@ -817,7 +820,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         if (timerRef.current) clearInterval(timerRef.current);
       };
     }
-  }, [activeTimer, blackTime, gameReady, playerInfo.black.username, playerInfo.white.username, roomId, selectedTimeOption, whiteTime, wsClient]);
+  }, [activeTimer, gameReady, roomId, selectedTimeOption]);
 
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
@@ -1422,7 +1425,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
                       // Handle move messages
                       if (message.includes("moved:")) {
                         const [username, moveInfo] = message.split(" moved: ");
-                        // Set color based on the username of who made the move
+                        // Set color based on who made the move
                         const isWhiteMove =
                           username === playerInfo.white.username;
 
@@ -1432,8 +1435,8 @@ const Chessboard: React.FC<ChessboardProps> = ({
                             <span
                               className={`ml-1 px-1.5 py-0.5 rounded ${
                                 isWhiteMove
-                                  ? "bg-gray-100 text-gray-900" // White background for white's moves
-                                  : "bg-gray-800 text-white" // Black background for black's moves
+                                  ? "bg-gray-100 text-gray-900" // White player's moves
+                                  : "bg-gray-800 text-white" // Black player's moves
                               }`}
                             >
                               {moveInfo}
@@ -1442,7 +1445,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
                         );
                       }
 
-                      // Handle regular chat messages
+                      // Handle chat messages
                       if (message.includes(":")) {
                         const [username, text] = message.split(":");
                         return (
