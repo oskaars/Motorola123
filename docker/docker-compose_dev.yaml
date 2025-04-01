@@ -11,7 +11,7 @@ services:
       sh -c "if [ -d /app/.git* ]; then \
                 cd /app && git pull; \
              else \
-                git clone --branch main https://github.com/oskaars/Motorola123.git /app; \
+                git clone --branch dev https://github.com/oskaars/Motorola123.git /app; \
              fi && \
              cd /app && \
              npm install && \
@@ -29,7 +29,7 @@ services:
       sh -c "if [ -d /app/.git ]; then \
                 cd /app && git pull; \
              else \
-                git clone https://github.com/oskaars/Motorola123.git /app; \
+                git clone --branch dev https://github.com/oskaars/Motorola123.git /app; \
              fi && \
              cd /app && \
              npm install && \

@@ -32,7 +32,7 @@ const GameModeButtons: React.FC = () => {
                 animation: "floatAnimation 6s ease-in-out infinite",
               }}
             >
-              Gambit.pl
+              Gambit+
             </h1>
           </div>
         </>
@@ -59,10 +59,10 @@ const GameModeButtons: React.FC = () => {
             >
               <BsFillPeopleFill className="text-[7vh] text-pink-500 mb-[2vh]" />
               <h3 className="text-[3.2vh] font-bold bg-gradient-to-r from-pink-500 to-rose-500 bg-clip-text text-transparent">
-                Play Locally
+                Play locally
               </h3>
               <p className="text-gray-300 mt-[1vh] text-[2vh]">
-                Play with friend on one device
+                Play with a friend on one device
               </p>
             </div>
 
@@ -72,10 +72,10 @@ const GameModeButtons: React.FC = () => {
             >
               <PiNetwork className="text-[7vh] text-purple-400 mb-[2vh]" />
               <h3 className="text-[3.2vh] font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-                Play LAN
+                Play on LAN
               </h3>
               <p className="text-gray-300 mt-[1vh] text-[2vh]">
-                Connect with local players
+                Create or join another player&apos;s room
               </p>
             </div>
 
