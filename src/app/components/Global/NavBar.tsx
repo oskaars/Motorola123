@@ -61,12 +61,12 @@ const NavBar: React.FC = () => {
     };
 
     if (nav) {
-      nav.addEventListener("mousemove", handleMouseMove);
+      (nav as HTMLElement).addEventListener("mousemove", handleMouseMove as EventListener);
     }
 
     return () => {
       if (nav) {
-        nav.removeEventListener("mousemove", handleMouseMove);
+        (nav as HTMLElement).removeEventListener("mousemove", handleMouseMove as EventListener);
       }
     };
   }, []);

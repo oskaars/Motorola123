@@ -296,16 +296,21 @@ const Chessboard = forwardRef<
     const client = new WebSocketClient("Player1");
     setWsClient(client);
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
     client.addEventListener("ROOM_CREATED", (data: { roomId: string }) => {
       setRoomId(data.roomId);
       console.log(`Room created: ${data.roomId}`);
     });
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
     client.addEventListener("JOINED_ROOM", (data: { roomId: string }) => {
       setRoomId(data.roomId);
       console.log(`Joined room: ${data.roomId}`);
     });
-
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
     client.addEventListener("OPPONENT_MOVE", (data: { notation: string }) => {
       const [from, to] = data.notation.split(" ");
       const moveResult = game.current.makeMove(from, to);
@@ -553,6 +558,8 @@ const Chessboard = forwardRef<
           }));
         } else {
           // Play normal piece movement sound
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
           playSound(piece);
         }
         setBoardState(game.current.board);

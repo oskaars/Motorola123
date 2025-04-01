@@ -108,6 +108,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     }
   }, [serverClient, inGame, connectionLost]);
 
+
   useEffect(() => {
     if (clockRunning && game) {
       startClock(game.turn);
