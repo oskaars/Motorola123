@@ -6,7 +6,6 @@ import {
   ChessGame,
   PieceSymbol,
   Square,
-  validateFen,
 } from "@/app/utils/chess";
 import { WebSocketClient } from "@/app/lib/websocket";
 import Link from "next/link";
@@ -423,7 +422,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
 
   const [boardSize, setBoardSize] = useState<number>(0);
   const boardRef = useRef<HTMLDivElement>(null);
-  const [game, setGame] = useState(() => new ChessGame());
+  const [game] = useState(() => new ChessGame());
   const [boardState, setBoardState] = useState(game.board);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
@@ -481,9 +480,6 @@ const Chessboard: React.FC<ChessboardProps> = ({
     const client = new WebSocketClient(""); // Empty initial username
     setWsClient(client);
 
-    interface RoomCreatedData {
-      roomId: string;
-    }
 
     interface JoinedRoomData {
       roomId: string;
@@ -693,7 +689,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         }
       }
     };
-  }, []);
+  }, [game, roomId]);
 
   // Add cleanup effect
   useEffect(() => {
@@ -821,7 +817,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         if (timerRef.current) clearInterval(timerRef.current);
       };
     }
-  }, [activeTimer, gameReady, roomId, selectedTimeOption]);
+  }, [activeTimer, blackTime, gameReady, playerInfo.black.username, playerInfo.white.username, roomId, selectedTimeOption, whiteTime, wsClient]);
 
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];

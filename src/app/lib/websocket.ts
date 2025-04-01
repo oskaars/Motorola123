@@ -1,4 +1,3 @@
-// Replace Function types with proper TypeScript types
 export class WebSocketClient {
   private socket: WebSocket;
   private roomId: string | null = null;
@@ -7,13 +6,14 @@ export class WebSocketClient {
   private socketReady: boolean = false;
   private serverUrl: string;
 
+
   constructor(username: string) {
     this.username = username;
 
     const isNotLocal = window.location.origin === 'https://gambit.plus' || window.location.origin === 'https://dev.gambit.plus';
 
-    // this.serverUrl = isNotLocal ? 'ws://api.gambit.plus:80' : 'ws://localhost:8080';
-    this.serverUrl = 'ws://api.gambit.plus:80';
+    this.serverUrl = isNotLocal ? 'wss://api.gambit.plus:443' : 'ws://localhost:8080';
+    // this.serverUrl = 'wss://api.gambit.plus:443';
 
     console.log(`Creating WebSocketClient for user: ${username}, connecting to: ${this.serverUrl}`);
     this.socket = new WebSocket(this.serverUrl);

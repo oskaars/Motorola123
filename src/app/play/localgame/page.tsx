@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Head from "next/head";
 import CursorTrail from "@/app/components/Global/CursorTrail";
 import "/src/globals.css";
