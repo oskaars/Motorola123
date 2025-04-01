@@ -76,7 +76,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       }
       stopClock();
     };
-  }, []);
+  }, [serverClient]);
 
   useEffect(() => {
     if (serverClient) {
@@ -102,8 +102,9 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     }
 
     return () => stopClock();
-  }, [clockRunning, game?.turn, serverClient]);
+  }, [clockRunning, game, game.turn, serverClient, startClock]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const startClock = (player: 'w' | 'b') => {
     stopClock();
     currentPlayerRef.current = player;

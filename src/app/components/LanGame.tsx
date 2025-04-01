@@ -689,7 +689,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         }
       }
     };
-  }, []);
+  }, [game, roomId]);
 
   // Add cleanup effect
   useEffect(() => {
@@ -817,7 +817,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
         if (timerRef.current) clearInterval(timerRef.current);
       };
     }
-  }, [activeTimer, gameReady, roomId, selectedTimeOption]);
+  }, [activeTimer, blackTime, gameReady, playerInfo.black.username, playerInfo.white.username, roomId, selectedTimeOption, whiteTime, wsClient]);
 
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
