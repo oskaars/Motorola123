@@ -868,3 +868,4 @@ export class ChessGame {
     return boardStr;
   }
 }
+export default ChessGame;
