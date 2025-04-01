@@ -100,7 +100,7 @@ const PlayerInfoBar: React.FC<PlayerInfoBarProps> = ({
           {capturedPieces.map((piece, index) => (
             <div key={index} className="relative hover:z-20">
               <img
-                src={getPieceImage(piece as PieceSymbol)}
+                src={getPieceImage(piece as PieceSymbol) || undefined}
                 alt={piece}
                 className="w-[3vh] h-[3vh] opacity-75 hover:opacity-100 transition-all duration-200"
                 style={{ filter: "drop-shadow(0 0 2px rgba(0,0,0,0.5))" }}
@@ -128,7 +128,7 @@ const TimeSelectionOverlay: React.FC<{ onStart: (time: number) => void }> = ({
   const [customTime, setCustomTime] = useState<string>("");
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[99] flex items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="w-full max-w-xl p-8">
         <div className="flex flex-col gap-6">
           <h3 className="text-[2.5vh] font-bold text-center mb-[2vh] bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -189,7 +189,7 @@ const PromotionOverlay = ({
 }) => {
   const PROMOTION_PIECES: PieceSymbol[] = ["q", "r", "b", "n"];
   return (
-    <div className="fixed z-[9999] inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <div className="fixed z-[9998] inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="bg-gray-900/90 p-[3vh] rounded-[1vh] shadow-xl border-[0.4vh] border-[#5c085a]/50">
         <h3 className="text-[2.5vh] font-bold text-center mb-[2vh] bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
           Choose Promotion Piece
@@ -431,9 +431,9 @@ const Chessboard = forwardRef<
       }
     };
 
-    document.addEventListener('fen-applied', handleFenApplied);
+    document.addEventListener("fen-applied", handleFenApplied);
     return () => {
-      document.removeEventListener('fen-applied', handleFenApplied);
+      document.removeEventListener("fen-applied", handleFenApplied);
     };
   }, []);
 
@@ -672,7 +672,7 @@ const Chessboard = forwardRef<
         {/* Chessboard Container */}
         <div
           ref={boardRef}
-          className="relative w-[90%]"
+          className="relative w-[100vw] lg:w-[90%]"
           style={{ maxWidth: `${boardSize}px` }}
         >
           <div className="relative w-full pb-[100%]">
@@ -860,7 +860,12 @@ const Chessboard = forwardRef<
 
 /* ------------------ LocalGame Component ------------------ */
 const LocalGame = () => {
-  const chessboardRef = useRef<{ resetGame: () => void }>(null);
+  const { lightColor, darkColor, highlightColor, PossibleMoveColor } =
+    useTheme();
+  const chessboardRef = useRef<{
+    resetGame: () => void;
+    loadFEN: (fen: string) => void;
+  }>(null);
   const gameRef = useRef(new ChessGame()); // Add game reference
   const [fenInput, setFenInput] = useState<string>("");
   const [fenError, setFenError] = useState<string | null>(null);
@@ -868,11 +873,26 @@ const LocalGame = () => {
 
   // Common chess positions as FEN strings
   const fenPresets = [
-    { name: "Initial Position", fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" },
-    { name: "Sicilian Defense", fen: "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2" },
-    { name: "Queen's Gambit", fen: "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq d3 0 2" },
-    { name: "Ruy Lopez", fen: "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3" },
-    { name: "Scholar's Mate", fen: "rnbqkbnr/ppp2ppp/3p4/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR b KQkq - 1 3" },
+    {
+      name: "Initial Position",
+      fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    },
+    {
+      name: "Sicilian Defense",
+      fen: "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
+    },
+    {
+      name: "Queen's Gambit",
+      fen: "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq d3 0 2",
+    },
+    {
+      name: "Ruy Lopez",
+      fen: "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+    },
+    {
+      name: "Scholar's Mate",
+      fen: "rnbqkbnr/ppp2ppp/3p4/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR b KQkq - 1 3",
+    },
   ];
 
   const applyFen = () => {
@@ -895,19 +915,23 @@ const LocalGame = () => {
       // Update board state
       if (chessboardRef.current) {
         // Force a refresh of the board
-        const event = new CustomEvent('fen-applied', { detail: fenInput });
+        const event = new CustomEvent("fen-applied", { detail: fenInput });
         document.dispatchEvent(event);
       }
 
       setFenError(null);
     } catch (error) {
-      setFenError("Error applying FEN: " + (error instanceof Error ? error.message : String(error)));
+      setFenError(
+        "Error applying FEN: " +
+          (error instanceof Error ? error.message : String(error))
+      );
     }
   };
 
   const copyCurrentFen = () => {
     const currentFen = gameRef.current.toFEN();
-    navigator.clipboard.writeText(currentFen)
+    navigator.clipboard
+      .writeText(currentFen)
       .then(() => {
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
@@ -918,15 +942,19 @@ const LocalGame = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row w-full h-full lg:h-[85vh] mb-[5vh] px-4 mt-[3vh] lg:mt-[0vh] justify-center items-start relative z-50 lg:gap-x-[2vh] mx-auto">
+    <div className="flex flex-col lg:flex-row w-full h-full lg:h-[85vh] mb-[5vh] px-1 lg:px-4 mt-[3vh] lg:mt-[0vh] justify-center items-start relative z-50 lg:gap-x-[2vh] mx-auto">
       {/* Left Section - Chessboard Container - Increased width */}
       <div className="flex items-center justify-center w-full lg:w-[65%] h-full lg:mt-[2vh]">
-        <div className="py-[1vh] flex flex-col justify-center items-center w-full h-full bg-black/20 rounded-[2vh] px-4 shadow-xl border-[0.4vh] border-[#5c085a]/50 backdrop-blur-sm">
+        <div className="py-[1vh] flex flex-col justify-center items-center w-full h-full bg-black/20 rounded-[2vh] px-1 lg:px-4 shadow-xl border-[0.4vh] border-[#5c085a]/50 backdrop-blur-sm">
           <Chessboard
             ref={chessboardRef}
             maxSize={1200}
             minSize={400}
             className="w-full h-full"
+            lightColor={lightColor}
+            darkColor={darkColor}
+            highlightColor={highlightColor}
+            possibleMoveColor={PossibleMoveColor}
           />
         </div>
       </div>
@@ -982,7 +1010,9 @@ const LocalGame = () => {
 
               {/* FEN Presets */}
               <div className="mb-4">
-                <h4 className="text-[1.8vh] font-medium text-purple-300 mb-2">Common Positions</h4>
+                <h4 className="text-[1.8vh] font-medium text-purple-300 mb-2">
+                  Common Positions
+                </h4>
                 <div className="grid grid-cols-1 gap-2 max-h-[20vh] overflow-y-auto pr-2 custom-scrollbar">
                   {fenPresets.map((preset, index) => (
                     <button

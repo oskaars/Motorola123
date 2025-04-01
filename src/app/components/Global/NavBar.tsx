@@ -61,12 +61,18 @@ const NavBar: React.FC = () => {
     };
 
     if (nav) {
-      (nav as HTMLElement).addEventListener("mousemove", handleMouseMove as EventListener);
+      (nav as HTMLElement).addEventListener(
+        "mousemove",
+        handleMouseMove as EventListener
+      );
     }
 
     return () => {
       if (nav) {
-        (nav as HTMLElement).removeEventListener("mousemove", handleMouseMove as EventListener);
+        (nav as HTMLElement).removeEventListener(
+          "mousemove",
+          handleMouseMove as EventListener
+        );
       }
     };
   }, []);
@@ -85,7 +91,7 @@ const NavBar: React.FC = () => {
   return (
     <>
       <nav
-        className={`mouse-cursor-gradient-tracking overflow-hidden fixed h-[8vh] top-0 left-0 w-full bg-black/80 lg:bg-black/10 flex items-center pt-3 pb-3 z-[9999] shadow-[0_1vh_2vh_rgba(0,0,0,0.5)] transition-transform duration-300 ${
+        className={`mouse-cursor-gradient-tracking overflow-hidden fixed h-[8vh] top-0 left-0 w-full bg-black/80 lg:bg-black/10 flex items-center pt-3 pb-3 z-[999] shadow-[0_1vh_2vh_rgba(0,0,0,0.5)] transition-transform duration-300 ${
           isVisible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
@@ -149,7 +155,7 @@ const NavBar: React.FC = () => {
           <button
             ref={burgerRef}
             onClick={toggleMenu}
-            className="md:hidden flex flex-col justify-center items-center w-[6vh] h-[6vh] relative z-50"
+            className="md:hidden flex flex-col justify-center items-center w-[6vh] h-[6vh] relative z-[200]"
             aria-label="Toggle menu"
           >
             <span
@@ -178,7 +184,7 @@ const NavBar: React.FC = () => {
       {/* Mobile Menu Overlay */}
       <div
         ref={menuRef}
-        className={`fixed pt-[8vh] left-0 w-full bg-black/90 backdrop-blur-lg z-40 transition-all duration-300 md:hidden ${
+        className={`fixed pt-[8vh] left-0 w-full bg-black/90 backdrop-blur-lg z-[101] transition-all duration-300 md:hidden ${
           isMenuOpen ? "translate-y-0" : "-translate-y-full"
         }`}
         style={{ height: "50vh" }}
