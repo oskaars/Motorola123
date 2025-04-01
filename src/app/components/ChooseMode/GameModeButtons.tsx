@@ -5,7 +5,6 @@ import { PiNetwork } from "react-icons/pi";
 import ComputerOptions from "./ComputerOptions";
 import { BsFillPeopleFill } from "react-icons/bs";
 import Link from "next/link";
-import LocalGameWindow from "../LocalGame";
 import { useRouter } from "next/navigation";
 
 const GameModeButtons: React.FC = () => {

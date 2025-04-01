@@ -6,7 +6,6 @@ import {
   ChessGame,
   PieceSymbol,
   Square,
-  validateFen,
 } from "@/app/utils/chess";
 import { WebSocketClient } from "@/app/lib/websocket";
 import Link from "next/link";

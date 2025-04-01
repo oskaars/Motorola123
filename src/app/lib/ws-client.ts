@@ -14,8 +14,8 @@ export class UciWebSocketClient {
   private ws: WebSocket | null = null;
   private clientId: string | null = null;
   private connected = false;
-  private responseQueue: Map<string, { 
-    resolve: (value: string[] | PromiseLike<string[]>) => void; 
+  private responseQueue: Map<string, {
+    resolve: (value: string[] | PromiseLike<string[]>) => void;
     reject: (reason: unknown) => void;
     responses: string[];
   }> = new Map();
@@ -30,7 +30,7 @@ export class UciWebSocketClient {
 
   public async initialize(): Promise<void> {
     if (this.connected) return;
-    
+
     await this.connect();
     await this.sendCommand('uci');
     await this.sendCommand('isready');
@@ -40,14 +40,14 @@ export class UciWebSocketClient {
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(this.serverUrl);
-        
+
         this.ws.onopen = () => {
           console.log('WebSocket connection established');
         };
-        
+
         this.ws.onmessage = (event) => {
           const message = event.data.toString();
-          
+
           if (message.startsWith('established:')) {
             this.clientId = message.substring('established:'.length);
             this.connected = true;
@@ -55,13 +55,13 @@ export class UciWebSocketClient {
             resolve();
             return;
           }
-          
+
           for (const [cmdId, pendingCmd] of this.responseQueue.entries()) {
             pendingCmd.responses.push(message);
-            
-            if (message.startsWith('bestmove') || 
-                message === 'readyok' || 
-                message === 'uciok' || 
+
+            if (message.startsWith('bestmove') ||
+                message === 'readyok' ||
+                message === 'uciok' ||
                 message === 'ok') {
               pendingCmd.resolve(pendingCmd.responses);
               this.responseQueue.delete(cmdId);
@@ -69,7 +69,7 @@ export class UciWebSocketClient {
             }
           }
         };
-        
+
         this.ws.onerror = (error) => {
           console.error('WebSocket error:', error);
           this.connected = false;
@@ -78,7 +78,7 @@ export class UciWebSocketClient {
           }
           reject(error);
         };
-        
+
         this.ws.onclose = () => {
           console.log('WebSocket connection closed');
           this.connected = false;
@@ -110,9 +110,9 @@ export class UciWebSocketClient {
 
   public async startSearch(timeControl: TimeControlParams = {}): Promise<string> {
     const { depth = 15, movetime = 1000, wtime, btime, winc, binc, movestogo } = timeControl;
-    
+
     let goCommand = 'go';
-    
+
     if (wtime !== undefined) goCommand += ` wtime ${wtime}`;
     if (btime !== undefined) goCommand += ` btime ${btime}`;
     if (winc !== undefined) goCommand += ` winc ${winc}`;
@@ -120,14 +120,14 @@ export class UciWebSocketClient {
     if (movestogo !== undefined) goCommand += ` movestogo ${movestogo}`;
     if (movetime !== undefined) goCommand += ` movetime ${movetime}`;
     if (depth !== undefined) goCommand += ` depth ${depth}`;
-    
+
     const responses = await this.sendCommand(goCommand);
-    
+
     const bestMoveResponse = responses.find(r => r.startsWith('bestmove'));
     if (!bestMoveResponse) {
       throw new Error('No bestmove found in engine response');
     }
-    
+
     const bestMove = bestMoveResponse.split(' ')[1];
     return bestMove;
   }
@@ -136,16 +136,16 @@ export class UciWebSocketClient {
     if (!this.connected || !this.ws || !this.clientId) {
       try {
         await this.connect();
-      } catch (_) {
-        return Promise.reject(new Error("Failed to connect to WebSocket server"));
+      } catch (error) {
+        return Promise.reject(new Error("Failed to connect to WebSocket server" + error));
       }
     }
-    
+
     return new Promise((resolve, reject) => {
       try {
         const cmdId = `cmd_${this.commandCounter++}`;
         console.log(`Sending command [${cmdId}]: ${command}`);
-        
+
         const timeoutId = setTimeout(() => {
           console.warn(`Command timeout [${cmdId}]: ${command}`);
           const pendingCmd = this.responseQueue.get(cmdId);
@@ -158,21 +158,21 @@ export class UciWebSocketClient {
             }
           }
         }, 7000);
-        
-        this.responseQueue.set(cmdId, { 
+
+        this.responseQueue.set(cmdId, {
           resolve: (responses) => {
             clearTimeout(timeoutId);
             resolve(responses);
-          }, 
+          },
           reject: (error) => {
             clearTimeout(timeoutId);
             reject(error);
           },
           responses: []
         });
-        
+
         this.ws!.send(command);
-        
+
         if (command.startsWith('setoption') || command === 'ucinewgame') {
           setTimeout(() => {
             const pendingCmd = this.responseQueue.get(cmdId);
@@ -183,7 +183,7 @@ export class UciWebSocketClient {
             }
           }, 100);
         }
-        
+
         if (command.startsWith('go')) {
           const intervalCheck = setInterval(() => {
             const pendingCmd = this.responseQueue.get(cmdId);
@@ -191,11 +191,11 @@ export class UciWebSocketClient {
               clearInterval(intervalCheck);
               return;
             }
-              
-            const hasBestMove = pendingCmd.responses.some(r => 
+
+            const hasBestMove = pendingCmd.responses.some(r =>
               r.startsWith('bestmove')
             );
-              
+
             if (hasBestMove) {
               console.log(`Command completed [${cmdId}]: bestmove found`);
               pendingCmd.resolve(pendingCmd.responses);
@@ -203,7 +203,7 @@ export class UciWebSocketClient {
               clearInterval(intervalCheck);
             }
           }, 100);
-          
+
           setTimeout(() => {
             clearInterval(intervalCheck);
           }, 5000);
