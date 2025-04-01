@@ -5,7 +5,7 @@ import { PiNetwork } from "react-icons/pi";
 import ComputerOptions from "./ComputerOptions";
 import { BsFillPeopleFill } from "react-icons/bs";
 import Link from "next/link";
-import LocalGameWindow from "../LocalGameWindow";
+import LocalGameWindow from "../LocalGame";
 import { useRouter } from "next/navigation";
 
 const GameModeButtons: React.FC = () => {
@@ -56,7 +56,7 @@ const GameModeButtons: React.FC = () => {
           <div className="relative z-[50] flex flex-col lg:flex-row gap-[4vh] lg:gap-[2vw] justify-center mt-[10vh] items-center">
             <div
               className="p-[2.5vh] rounded-[2vh] border-[0.4vh] border-[#5c085a] bg-gray-900/50 backdrop-blur-sm cursor-pointer transition-all hover:border-pink-500 w-[80vw] lg:w-[45vh] h-[35vh] flex flex-col justify-center items-center"
-              onClick={() => setMode("Local")}
+              onClick={() => router.push("/play/localgame")}
             >
               <BsFillPeopleFill className="text-[7vh] text-pink-500 mb-[2vh]" />
               <h3 className="text-[3.2vh] font-bold bg-gradient-to-r from-pink-500 to-rose-500 bg-clip-text text-transparent">
@@ -97,9 +97,6 @@ const GameModeButtons: React.FC = () => {
           <>
             {mode === "Computer" && (
               <ComputerOptions onBack={() => setMode(null)} />
-            )}
-            {mode === "Local" && (
-              <LocalGameWindow onBack={() => setMode(null)} />
             )}
           </>
         )}

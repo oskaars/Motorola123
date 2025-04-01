@@ -10,6 +10,13 @@ export class WebSocketClient {
     console.log(`Creating WebSocketClient for user: ${username}`);
     this.socket = new WebSocket('ws://localhost:8080');
     this.setupSocket();
+
+    // Add window unload handler
+    window.addEventListener('beforeunload', () => {
+      if (this.roomId) {
+        this.leaveRoom();
+      }
+    });
   }
 
   private reconnect() {
@@ -49,11 +56,22 @@ export class WebSocketClient {
   private onMessage(event: MessageEvent) {
     try {
       const data = JSON.parse(event.data);
-      console.log('Received message from server:', data);
+      console.log('Received message:', data);
+
+      if (data.type === 'PLAYER_LEFT') {
+        console.log('Player left event received:', data);
+        // Trigger event for remaining player
+        this.triggerEvent('PLAYER_LEFT', {
+          leftPlayer: data.username,
+          winner: this.username // The remaining player wins
+        });
+      }
+
       if (data.type === 'ROOM_CREATED' || data.type === 'JOINED_ROOM') {
         this.roomId = data.roomId;
         console.log(`Set roomId to ${this.roomId}`);
       }
+      
       if (this.eventHandlers[data.type]) {
         this.eventHandlers[data.type].forEach(handler => handler(data));
       }
@@ -162,7 +180,12 @@ export class WebSocketClient {
   }
   leaveRoom(){
     if (this.roomId) {
-      this.socket.send(JSON.stringify({ type: 'LEAVE_ROOM', roomId: this.roomId }));
+      console.log('Player leaving room:', this.username);
+      this.socket.send(JSON.stringify({ 
+        type: 'LEAVE_ROOM', 
+        roomId: this.roomId,
+        username: this.username 
+      }));
       this.roomId = null;
     }
   }
