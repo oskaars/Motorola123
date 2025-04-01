@@ -14,3 +14,17 @@ services:
              npm run dev"
     environment:
       - NODE_ENV=development
+
+  api:
+    image: node:18
+    container_name: api
+    working_dir: /api
+    ports:
+      - "4002:8080"
+    command: >
+      sh -c "git clone https://github.com/oskaars/Motorola123.git /api && \
+             cd /api && \
+             npm install && \
+             node src/app/api/server.js"
+    environment:
+      - NODE_ENV=development
