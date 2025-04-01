@@ -2,6 +2,7 @@
   "name": "szachy",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,6 +15,7 @@
     "@react-three/drei": "^10.0.5",
     "@react-three/fiber": "^9.1.0",
     "@types/three": "^0.175.0",
+    "isomorphic-ws": "^5.0.0",
     "next": "^15.1.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -21,7 +23,7 @@
     "react-icons": "^5.5.0",
     "tailwindcss-intersect": "^2.2.0",
     "three": "^0.175.0",
-    "ws": "^8.18.0"
+    "ws": "^8.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.26.10",
@@ -36,7 +38,7 @@
     "@types/node": "^20.17.13",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
-    "@types/ws": "^8.5.13",
+    "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.21",
     "babel-jest": "^29.7.0",
     "eslint": "^9",
