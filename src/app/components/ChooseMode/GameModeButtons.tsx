@@ -75,7 +75,7 @@ const GameModeButtons: React.FC = () => {
                 Play on LAN
               </h3>
               <p className="text-gray-300 mt-[1vh] text-[2vh]">
-                Create or join another player's room
+                Create or join another player&apos;s room
               </p>
             </div>
 
