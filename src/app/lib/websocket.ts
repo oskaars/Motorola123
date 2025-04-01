@@ -7,6 +7,8 @@ export class WebSocketClient {
   private socketReady: boolean = false;
   private serverUrl: string;
 
+  //test comment
+
   constructor(username: string) {
     this.username = username;
 
