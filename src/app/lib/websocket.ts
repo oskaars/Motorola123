@@ -1,18 +1,191 @@
+// Replace Function types with proper TypeScript types
 export class WebSocketClient {
   private socket: WebSocket;
   private roomId: string | null = null;
   public username: string;
   private listeners: Map<string, ((data: unknown) => void)[]> = new Map();
   private socketReady: boolean = false;
-    constructor(username: string) {on    this.username = username;       console.log(`Creating WebSocketClient for user: ${username}`);&     this.socket = new WebSocket('ws://localhost:8080//api.gambit.plus:80tupSocket();ol  }og(`  private reconnect() {t     console.log('Attempting to reconnect...');er    this.socket = new WebSocket('ws://localhost:8080');Ur    this.setupSocket();et  }
-    private setupSocket() {)     this.socket.onopen = () => {o       console.log('WebSocket connected');bS      this.socketReady = true;is      this.dispatchEvent('SOCKET_READY', {});()    };  th    this.socket.onmessage = (event) => this.onMessage(event);ecte    this.socket.onerror = (error) => {        console.error('WebSocket error:', error);      };        this.socket.onclose = () => {>       console.log('WebSocket disconnected');er      this.socketReady = false;le    };('  }Sock  private ensureSocketReady(callback: () => void) {os    if (this.socketReady) {lo      callback();on    } else {        console.log('Socket not ready, waiting...');va      setTimeout(() => this.ensureSocketReady(callback), 100);ke    }y)  }
-{   private onMessage(event: MessageEvent) {{e    try {;e      const data = JSON.parse(event.data);;t      console.log('Received message from server:', data);{       if (data.type === 'ROOM_CREATED' || data.type === 'JOINED_ROOM') {a         this.roomId = data.roomId;o         console.log(`Set roomId to ${this.roomId}`);        }a       if (this.listeners.has(data.type)) {          this.listeners.get(data.type)!.forEach(handler => handler(data));`       }I     } catch (error) {        console.error('Error processing message:', error);      }    }{e    private dispatchEvent(event: string, data: unknown): void {      if (this.listeners.has(event)) {        this.listeners.get(event)!.forEach(callback => callback(data));      }    }{e    addEventListener(event: string, callback: (data: unknown) => void): void {      if (!this.listeners.has(event)) {        this.listeners.set(event, []);      }      this.listeners.get(event)!.push(callback);    }{o    removeEventListener(event: string, callback: (data: unknown) => void): void {      if (this.listeners.has(event)) {        const callbacks = this.listeners.get(event)!;        this.listeners.set(event, callbacks.filter(cb => cb !== callback));      }    } n    createRoom(timeInSeconds: number = 600) {      console.log(`Attempting to create room with ${timeInSeconds} seconds`);            this.ensureSocketReady(() => {        console.log(`Creating room with ${timeInSeconds} seconds per player`);        try {          const message = JSON.stringify({            type: 'CREATE_ROOM',            username: this.username,            timeInSeconds: timeInSeconds          });          console.log('Sending message:', message);          this.socket.send(message);        } catch (error) {          console.error('Error creating room:', error);        }      });    } e    joinRoom(roomId: string) {      console.log(`Attempting to join room: ${roomId}`);            this.ensureSocketReady(() => {        console.log(`Joining room: ${roomId}`);        this.socket.send(JSON.stringify({          type: 'JOIN_ROOM',          roomId: roomId,          username: this.username        }));      });;r      this.addEventListener('JOINED_ROOM', () => {        setTimeout(() => this.sendRequestColor(), 100);      });    }{e    sendMessage(message: string) {      if (this.roomId) {        this.socket.send(JSON.stringify({          type: 'SEND_MESSAGE',          roomId: this.roomId,          message,          sender: this.username        }));      } }  }e  s  sendMove(notation: string) {      if (this.roomId) {        console.log(`Sending move: ${notation} to room: ${this.roomId} as player: ${this.username}`);        this.socket.send(JSON.stringify({          type: 'MAKE_MOVE',          roomId: this.roomId,          notation,          sender: this.username        })); }    } else {        console.error("Cannot send move: Not in a room"); }    });  }en  sendTimeOut(winner: string) { i    if (this.roomId) {        console.log(`Sending timeout notification. Winner: ${winner}`);        this.socket.send(JSON.stringify({          type: 'TIME_OUT',          roomId: this.roomId,          winner: winner        })); }    }{:  } sen  sendResignation(winner: string) { i    if (this.roomId) {        this.socket.send(JSON.stringify({          type: 'RESIGN',          roomId: this.roomId,          winner        })); }    }
-  }ea  leaveRoom(){ i    if (this.roomId) {        this.socket.send(JSON.stringify({ type: 'LEAVE_ROOM', roomId: this.roomId }));        this.roomId = null; }    }ea  }en  sendRequestColor() { i    if (this.roomId) {        console.log(`Requesting color assignment for ${this.username} in room ${this.roomId}`);                this.ensureSocketReady(() => {          this.socket.send(JSON.stringify({            type: 'REQUEST_COLOR',            roomId: this.roomId,            username: this.username          }));        }); }    } else {        console.error("Cannot request color: Not in a room"); }    } t  }
+  private serverUrl: string;
 
-}
+  constructor(username: string) {
+    this.username = username;
 
-export default WebSocketClient;
-e
+    // Sprawdź, czy klient łączy się z lokalnej domeny
+    const isNotLocal = window.location.origin === 'https://gambit.plus' || window.location.origin === 'https://dev.gambit.plus';
+
+    // Ustaw adres serwera WebSocket w zależności od domeny
+    this.serverUrl = isNotLocal ? 'ws://api.gambit.plus:80' : 'ws://localhost:8080';
+
+    console.log(`Creating WebSocketClient for user: ${username}, connecting to: ${this.serverUrl}`);
+    this.socket = new WebSocket(this.serverUrl);
+    this.setupSocket();
+  }
+
+  private reconnect() {
+    console.log('Attempting to reconnect...');
+    this.socket = new WebSocket(this.serverUrl);
+    this.setupSocket();
+  }
+
+  private setupSocket() {
+    this.socket.onopen = () => {
+      console.log('WebSocket connected');
+      this.socketReady = true;
+      this.dispatchEvent('SOCKET_READY', {});
+    };
+
+    this.socket.onmessage = (event) => this.onMessage(event);
+
+    this.socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    this.socket.onclose = () => {
+      console.log('WebSocket disconnected');
+      this.socketReady = false;
+    };
+  }
+
+  private ensureSocketReady(callback: () => void) {
+    if (this.socketReady) {
+      callback();
+    } else {
+      console.log('Socket not ready, waiting...');
+      setTimeout(() => this.ensureSocketReady(callback), 100);
+    }
+  }
+
+  private onMessage(event: MessageEvent) {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('Received message from server:', data);
+      if (data.type === 'ROOM_CREATED' || data.type === 'JOINED_ROOM') {
+        this.roomId = data.roomId;
+        console.log(`Set roomId to ${this.roomId}`);
+      }
+      if (this.listeners.has(data.type)) {
+        this.listeners.get(data.type)!.forEach(handler => handler(data));
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
+    }
+  }
+
+  private dispatchEvent(event: string, data: unknown): void {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event)!.forEach(callback => callback(data));
+    }
+  }
+
+  addEventListener(event: string, callback: (data: unknown) => void): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event)!.push(callback);
+  }
+
+  removeEventListener(event: string, callback: (data: unknown) => void): void {
+    if (this.listeners.has(event)) {
+      const callbacks = this.listeners.get(event)!;
+      this.listeners.set(event, callbacks.filter(cb => cb !== callback));
+    }
+  }
+
+  createRoom(timeInSeconds: number = 600) {
+    console.log(`Attempting to create room with ${timeInSeconds} seconds`);
+    
+    this.ensureSocketReady(() => {
+      console.log(`Creating room with ${timeInSeconds} seconds per player`);
+      try {
+        const message = JSON.stringify({
+          type: 'CREATE_ROOM',
+          username: this.username,
+          timeInSeconds: timeInSeconds
+        });
+        console.log('Sending message:', message);
+        this.socket.send(message);
+      } catch (error) {
+        console.error('Error creating room:', error);
+      }
+    });
+  }
+
+  joinRoom(roomId: string) {
+    console.log(`Attempting to join room: ${roomId}`);
+    
+    this.ensureSocketReady(() => {
+      console.log(`Joining room: ${roomId}`);
+      this.socket.send(JSON.stringify({
+        type: 'JOIN_ROOM',
+        roomId: roomId,
+        username: this.username
+      }));
+    });
+
+    this.addEventListener('JOINED_ROOM', () => {
+      setTimeout(() => this.sendRequestColor(), 100);
+    });
+  }
+
+  sendMessage(message: string) {
+    if (this.roomId) {
+      this.socket.send(JSON.stringify({
+        type: 'SEND_MESSAGE',
+        roomId: this.roomId,
+        message,
+        sender: this.username
+      }));
+    }
+  }
+
+  sendMove(notation: string) {
+    if (this.roomId) {
+      console.log(`Sending move: ${notation} to room: ${this.roomId} as player: ${this.username}`);
+      this.socket.send(JSON.stringify({
+        type: 'MAKE_MOVE',
+        roomId: this.roomId,
+        notation,
+        sender: this.username
+      }));
+    } else {
+      console.error("Cannot send move: Not in a room");
+    }
+  }
+  sendTimeOut(winner: string) {
+    if (this.roomId) {
+      console.log(`Sending timeout notification. Winner: ${winner}`);
+      this.socket.send(JSON.stringify({
+        type: 'TIME_OUT',
+        roomId: this.roomId,
+        winner: winner
+      }));
+    }
+  }
+
+  sendResignation(winner: string) {
+    if (this.roomId) {
+      this.socket.send(JSON.stringify({
+        type: 'RESIGN',
+        roomId: this.roomId,
+        winner
+      }));
+    }
+  }
+  leaveRoom(){
+    if (this.roomId) {
+      this.socket.send(JSON.stringify({ type: 'LEAVE_ROOM', roomId: this.roomId }));
+      this.roomId = null;
+    }
+  }
+  sendRequestColor() {
+    if (this.roomId) {
+      console.log(`Requesting color assignment for ${this.username} in room ${this.roomId}`);
+      
+      this.ensureSocketReady(() => {
+        this.socket.send(JSON.stringify({
+          type: 'REQUEST_COLOR',
+          roomId: this.roomId,
+          username: this.username
         }));
       });
     } else {
