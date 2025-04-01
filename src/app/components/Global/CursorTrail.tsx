@@ -21,10 +21,6 @@ const CursorTrail = () => {
       const isMobileDevice =
         window.innerWidth <= 768 ||
         "ontouchstart" in window ||
-<<<<<<< HEAD
-        navigator.maxTouchPoints > 0 ||
-=======
->>>>>>> 2b5bc01 (/components/Globals fully fixed)
         navigator.maxTouchPoints > 0;
       setIsMobile(isMobileDevice);
     };
@@ -34,11 +30,7 @@ const CursorTrail = () => {
 
     if (isMobile) return;
 
-<<<<<<< HEAD
-    const handleMouseMove = (e: { clientX: number; clientY: number; }) => {
-=======
     const handleMouseMove = (e: MouseEvent) => {
->>>>>>> 2b5bc01 (/components/Globals fully fixed)
       coords.current.x = e.clientX;
       coords.current.y = e.clientY;
       lastMoveTime.current = Date.now();
@@ -51,8 +43,8 @@ const CursorTrail = () => {
 
     circleRefs.current.forEach((circle) => {
       if (circle) {
-        (circle as CircleElement).x = 0;
-        (circle as CircleElement).y = 0;
+        circle.x = 0;
+        circle.y = 0;
       }
     });
 
@@ -88,27 +80,20 @@ const CursorTrail = () => {
 
       circleRefs.current.forEach((circle, index) => {
         if (!circle) return;
-        (circle as CircleElement).style.left = `${x - 16}px`;
-        (circle as CircleElement).style.top = `${y - 16}px`;
+        circle.style.left = `${x - 16}px`;
+        circle.style.top = `${y - 16}px`;
         const baseScale =
           (circleRefs.current.length - index) / circleRefs.current.length;
-<<<<<<< HEAD
         circle.style.transform = `scale(${baseScale * currentScale.current})`;
-        circle.style.opacity = currentOpacity.current.toString();
+        circle.style.opacity = String(currentOpacity.current);
         circle.x = x;
         circle.y = y;
-=======
-        (circle as CircleElement).style.transform = `scale(${baseScale * currentScale.current})`;
-        (circle as CircleElement).style.opacity = String(currentOpacity.current);
-        (circle as CircleElement).x = x;
-        (circle as CircleElement).y = y;
->>>>>>> 2b5bc01 (/components/Globals fully fixed)
 
         const nextCircle =
           circleRefs.current[index + 1] || circleRefs.current[0];
         if (nextCircle) {
-          x += ((nextCircle as CircleElement).x - x) * 0.3;
-          y += ((nextCircle as CircleElement).y - y) * 0.3;
+          x += (nextCircle.x - x) * 0.3;
+          y += (nextCircle.y - y) * 0.3;
         }
       });
 
@@ -130,13 +115,9 @@ const CursorTrail = () => {
       {Array.from({ length: circleCount }).map((_, i) => (
         <div
           key={i}
-<<<<<<< HEAD
-          ref={(el) => { circleRefs.current[i] = el as CircleElement }}
-=======
           ref={(el) => {
             circleRefs.current[i] = el as CircleElement;
           }}
->>>>>>> 2b5bc01 (/components/Globals fully fixed)
           className={`fixed pointer-events-none h-8 w-8 rounded-full hidden lg:block ${
             i === 0 ? "z-[10]" : "z-[10]"
           }`}
