@@ -12,7 +12,7 @@ type TimeControlType = "blitz" | "rapid" | "classical" | "custom";
 interface TimeControl {
   type: TimeControlType;
   baseTime: number;
-  increment: number; 
+  increment: number;
 }
 
 type ServerGameWindowProps = {
@@ -42,15 +42,15 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   const [engineType, setEngineType] = useState<EngineType>(initialSettings?.type || "Minimax");
   const [useOpeningBook, setUseOpeningBook] = useState<boolean>(initialSettings?.useBook || false);
   const [searchDepth, setSearchDepth] = useState<number>(initialSettings?.depth || 5);
-  
+
   const [timeControl, setTimeControlState] = useState<TimeControl>(
-    initialSettings?.timeControl || 
+    initialSettings?.timeControl ||
     { type: "rapid", baseTime: 600, increment: 5 }
   );
   const [whiteTime, setWhiteTime] = useState<number>(timeControl.baseTime);
   const [blackTime, setBlackTime] = useState<number>(timeControl.baseTime);
   const [clockRunning, setClockRunning] = useState<boolean>(false);
-  const [lastMoveTime, setLastMoveTime] = useState<number>(0);
+  const [ setLastMoveTime] = useState<number>(0);
   const clockIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentPlayerRef = useRef<'w' | 'b'>('w');
 
@@ -60,7 +60,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       setWhiteTime(initialSettings.timeControl.baseTime);
       setBlackTime(initialSettings.timeControl.baseTime);
     }
-    
+
     if (initialSettings) {
       setEngineType(initialSettings.type);
       setUseOpeningBook(initialSettings.useBook);
@@ -100,14 +100,14 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     } else {
       stopClock();
     }
-    
+
     return () => stopClock();
   }, [clockRunning, game?.turn, serverClient]);
 
   const startClock = (player: 'w' | 'b') => {
     stopClock();
     currentPlayerRef.current = player;
-    
+
     clockIntervalRef.current = setInterval(() => {
       if (player === 'w') {
         setWhiteTime(prev => {
@@ -150,7 +150,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       setInGame(true);
 
       const client = new UciWebSocketClient("", "ws://127.0.0.1:3100/ws");
-      
+
       client.onConnectionLost(() => {
         console.error("WebSocket connection lost");
         setConnectionLost(true);
@@ -168,7 +168,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
 
       const newGame = new ChessGame();
       setGame(newGame);
-      
+
       setGameMessages([
         "Game started! You are playing as White against the server.",
         `Engine type: ${engineType}`,
@@ -217,8 +217,8 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   };
 
   const setEngineSettings = async (
-    type: EngineType, 
-    useBook: boolean, 
+    type: EngineType,
+    useBook: boolean,
     depth: number
   ) => {
     setEngineType(type);
@@ -263,7 +263,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   const setTimeControl = (newTimeControl: TimeControl) => {
     console.log(`Setting time control: ${JSON.stringify(newTimeControl)}`);
     setTimeControlState(newTimeControl);
-    
+
     try {
       const currentSettings = localStorage.getItem('engineSettings');
       if (currentSettings) {
@@ -290,7 +290,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
 
     const now = Date.now();
     setLastMoveTime(now);
-    
+
     setWhiteTime(prev => prev + timeControl.increment);
     setGameMessages((prev) => [...prev, `Your move: ${from}${to}`]);
 
@@ -330,9 +330,9 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
       if (blackTime < 5) {
         timeControlParams.movetime = 500;
       } else if (blackTime < 15) {
-        timeControlParams.movetime = 1000; 
+        timeControlParams.movetime = 1000;
       }
-      
+
       console.log(`Sending search command with time control: `, timeControlParams);
 
       let bestMove;
@@ -344,15 +344,15 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
 
         const safeStringify = (obj: unknown) => {
           try {
-            return JSON.stringify(obj, (key, value) => 
+            return JSON.stringify(obj, (key, value) =>
               key === 'stack' || key === 'message' ? String(value) : value, 2);
           } catch (e) {
-            return String(obj);
+            return (String(obj) + e);
           }
         };
-        
+
         console.error("Error details:", safeStringify(error));
-        
+
         const errorMessage = error instanceof Error ? error.message : String(error);
         throw new Error(`Search failed: ${errorMessage}`);
       }
@@ -376,7 +376,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         const serverMoveNotation = `${serverFrom}${serverTo}`;
         const allMoves = [...updatedMoves, serverMoveNotation];
         setGameMoves(allMoves);
-        
+
         setBlackTime(prev => prev + timeControl.increment);
 
         setGameMessages((prev) => [...prev, `Server move: ${serverFrom}${serverTo}`]);
@@ -394,18 +394,18 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
     } catch (error) {
       console.error("Error getting server move:", error);
 
-      const isErrorWithMessage = (err: unknown): err is Error => 
+      const isErrorWithMessage = (err: unknown): err is Error =>
         typeof err === 'object' && err !== null && 'message' in err;
-      
+
       const errorMessage = isErrorWithMessage(error) ? error.message : String(error);
       setGameMessages((prev) => [...prev, `Error getting server's move: ${errorMessage}`]);
-    
+
       if (isErrorWithMessage(error) && error.stack) {
         console.error("Error stack:", error.stack);
       }
-    
+
       if (
-        isErrorWithMessage(error) && 
+        isErrorWithMessage(error) &&
         typeof error.message === "string" &&
         (error.message.includes("connection") ||
          error.message.includes("timeout") ||
@@ -524,7 +524,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
             <br />
             <span className="text-xs">(3+2)</span>
           </button>
-          
+
           <button
             onClick={() => setTimeControl({ type: "rapid", baseTime: 600, increment: 5 })}
             className={`px-3 py-2 rounded-lg border-2 transition-all ${
@@ -537,7 +537,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
             <br />
             <span className="text-xs">(10+5)</span>
           </button>
-          
+
           <button
             onClick={() => setTimeControl({ type: "classical", baseTime: 1800, increment: 10 })}
             className={`px-3 py-2 rounded-lg border-2 transition-all ${
@@ -621,7 +621,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
                   <p className="text-sm">Black</p>
                   <p className="text-xl font-mono">{formatTime(blackTime)}</p>
                 </div>
-                
+
                 <div className={`px-4 py-2 rounded-lg ${
                   game.turn === 'w' && clockRunning ? 'bg-purple-500/40 text-white' : 'bg-gray-800/40 text-gray-300'
                 }`}>
@@ -629,7 +629,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
                   <p className="text-xl font-mono">{formatTime(whiteTime)}</p>
                 </div>
               </div>
-            
+
               <ServerChessboard
                 game={game}
                 onPlayerMove={handlePlayerMove}
@@ -676,7 +676,7 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
               End Game
             </button>
           )}
-          
+
           <Link
             href="/play"
             className="w-full px-6 py-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30 border-[0.3vh] border-red-500/50 rounded-lg text-red-300 font-medium text-lg transition-all duration-300 text-center"
