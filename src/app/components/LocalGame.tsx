@@ -409,9 +409,52 @@ const Chessboard = forwardRef<
     }
   }, [activeTimer, selectedTimeOption, isCheckmate]);
 
+  const playSound = (
+    piece: PieceSymbol | " " | null,
+    isCapture: boolean = false
+  ) => {
+    if (isCapture) {
+      // Random capture sound (zbicie1/2/3)
+      const captureNum = Math.floor(Math.random() * 3) + 1;
+      const audio = new Audio(`/sounds/zbicie${captureNum}.mp3`);
+      audio.play();
+      return;
+    }
+
+    if (!piece || piece === " ") return;
+
+    let soundFile = "";
+    switch (piece.toLowerCase()) {
+      case "p":
+        soundFile = "pawn.mp3";
+        break;
+      case "n":
+        soundFile = "knight.mp3";
+        break;
+      case "b":
+        soundFile = "bishop.mp3";
+        break;
+      case "r":
+        soundFile = "rook.mp3";
+        break;
+      case "q":
+        soundFile = "queen.mp3";
+        break;
+      case "k":
+        soundFile = "king.mp3";
+        break;
+    }
+
+    if (soundFile) {
+      const audio = new Audio(`/sounds/${soundFile}`);
+      audio.play();
+    }
+  };
+
   const handlePromotion = (promotionPiece: PieceSymbol) => {
     if (!promotionFromSquare || !promotionSquare) return;
 
+    const targetPiece = game.current.getPiece(promotionSquare);
     const moveResult = game.current.makeMove(
       promotionFromSquare,
       promotionSquare,
@@ -419,8 +462,9 @@ const Chessboard = forwardRef<
     );
 
     if (moveResult) {
-      const targetPiece = game.current.getPiece(promotionSquare);
+      // Play capture sound if there's a piece being captured during promotion
       if (targetPiece && targetPiece !== " ") {
+        playSound(null, true);
         const isWhitePiece = targetPiece === targetPiece.toUpperCase();
         setCapturedPieces((prev) => ({
           ...prev,
@@ -429,6 +473,9 @@ const Chessboard = forwardRef<
             targetPiece,
           ],
         }));
+      } else {
+        // Play the sound of the promoted piece
+        playSound(promotionPiece);
       }
 
       setBoardState(game.current.board);
@@ -470,7 +517,9 @@ const Chessboard = forwardRef<
       const targetPiece = game.current.getPiece(square);
       const moveResult = game.current.makeMove(selectedSquare, square);
       if (moveResult) {
+        // Play capture sound if there's a piece being captured
         if (targetPiece && targetPiece !== " ") {
+          playSound(null, true); // Play capture sound
           const isWhitePiece = targetPiece === targetPiece.toUpperCase();
           setCapturedPieces((prev) => ({
             ...prev,
@@ -479,6 +528,9 @@ const Chessboard = forwardRef<
               targetPiece,
             ],
           }));
+        } else {
+          // Play normal piece movement sound
+          playSound(piece);
         }
         setBoardState(game.current.board);
         setSelectedSquare(null);

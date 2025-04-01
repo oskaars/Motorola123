@@ -12,6 +12,35 @@ import { WebSocketClient } from "@/app/lib/websocket";
 import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
 
+const playSound = (
+  piece: PieceSymbol | " " | null,
+  isCapture: boolean = false
+) => {
+  if (isCapture) {
+    const captureNum = Math.floor(Math.random() * 3) + 1;
+    const audio = new Audio(`/sounds/zbicie${captureNum}.mp3`);
+    audio.play();
+    return;
+  }
+
+  if (!piece || piece === " ") return;
+
+  const soundMap: Record<string, string> = {
+    p: "pawn.mp3",
+    n: "knight.mp3",
+    b: "bishop.mp3",
+    r: "rook.mp3",
+    q: "queen.mp3",
+    k: "king.mp3",
+  };
+
+  const soundFile = soundMap[piece.toLowerCase()];
+  if (soundFile) {
+    const audio = new Audio(`/sounds/${soundFile}`);
+    audio.play();
+  }
+};
+
 interface ChessboardProps {
   maxSize?: number;
   minSize?: number;
@@ -120,12 +149,13 @@ const PlayerInfoBar = ({
   </div>
 );
 
-// Update the timeOptions array (remove Custom option)
+// Restore custom time option
 const timeOptions = [
   { label: "1 Min", seconds: 60 },
   { label: "3 Min", seconds: 180 },
   { label: "10 Min", seconds: 600 },
   { label: "60 Min", seconds: 3600 },
+  { label: "Custom", seconds: -1 }, // Add custom option back
 ];
 
 // Update the custom time input logic in CreateJoinOverlay
@@ -218,10 +248,16 @@ const CreateJoinOverlay: React.FC<{
                 <button
                   key={option.seconds}
                   onClick={() => {
-                    setSelectedTime(option.seconds);
-                    setCustomTime("");
+                    if (option.seconds === -1) {
+                      setCustomTime("");
+                      setSelectedTime(0);
+                    } else {
+                      setSelectedTime(option.seconds);
+                      setCustomTime("");
+                    }
                   }}
                   className={`p-[2vh] rounded-[1vh] transition-all duration-300 ${
+                    (option.seconds === -1 && customTime) ||
                     selectedTime === option.seconds
                       ? "bg-gradient-to-r from-purple-500/30 to-pink-500/30 border-purple-500/50"
                       : "bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30"
@@ -232,6 +268,21 @@ const CreateJoinOverlay: React.FC<{
               ))}
             </div>
 
+            {/* Add custom time input */}
+            {(selectedTime === 0 || customTime) && (
+              <div className="mt-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="180"
+                  value={customTime}
+                  onChange={handleCustomTimeChange}
+                  placeholder="Enter minutes (1-180)"
+                  className="w-full px-[2vh] py-[2vh] bg-gray-900/80 rounded-[1vh] border-[0.3vh] border-purple-500/40 text-white placeholder-gray-400 text-[2vh]"
+                />
+              </div>
+            )}
+
             <div className="flex gap-4">
               <button
                 onClick={() => setStep("createName")}
@@ -240,8 +291,13 @@ const CreateJoinOverlay: React.FC<{
                 Back
               </button>
               <button
-                onClick={() => onCreateRoom(selectedTime, username)}
-                disabled={!selectedTime}
+                onClick={() =>
+                  onCreateRoom(
+                    selectedTime || parseInt(customTime) * 60,
+                    username
+                  )
+                }
+                disabled={!selectedTime && !customTime}
                 className="flex-1 p-[2vh] bg-gradient-to-r from-purple-600/40 to-pink-600/40 hover:from-purple-600/50 hover:to-pink-600/50 border-[0.3vh] border-purple-500/50 rounded-[1vh] text-purple-300 font-medium text-[2.5vh] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Create Room
@@ -497,15 +553,22 @@ const Chessboard: React.FC<ChessboardProps> = ({
     client.addEventListener("OPPONENT_MOVE", (data: OpponentMoveData) => {
       const from = data.notation.substring(0, 2);
       const to = data.notation.substring(2, 4);
-
-      // Check if move will capture a piece
       const targetPiece = game.getPiece(to);
+      const piece = game.getPiece(from);
+
       const moveResult =
         data.notation.length > 4
           ? game.makeMove(from, to, data.notation.substring(4) as PieceSymbol)
           : game.makeMove(from, to);
 
       if (moveResult) {
+        // Play sound effects
+        if (targetPiece && targetPiece !== " ") {
+          playSound(null, true); // Play capture sound
+        } else {
+          playSound(piece); // Play piece movement sound
+        }
+
         // If a piece was captured, add it to the captured pieces
         if (targetPiece && targetPiece !== " ") {
           const isWhitePiece = targetPiece === targetPiece.toUpperCase();
@@ -811,7 +874,7 @@ const Chessboard: React.FC<ChessboardProps> = ({
       (game.turn === "b" && playerColor === "black");
 
     if (!isPlayerTurn) {
-      setChatMessages((prev) => [...prev, "It's not your turn"]);
+      setChatMessages((prev) => [...prev, "It's not your turn ⛔"]);
       return;
     }
 
@@ -844,6 +907,13 @@ const Chessboard: React.FC<ChessboardProps> = ({
       const moveResult = game.makeMove(selectedSquare, square);
 
       if (moveResult) {
+        // Play sound effects
+        if (targetPiece && targetPiece !== " ") {
+          playSound(null, true); // Play capture sound
+        } else {
+          playSound(piece); // Play piece movement sound
+        }
+
         // If a piece was captured, add it to the captured pieces
         if (targetPiece && targetPiece !== " ") {
           const isWhitePiece = targetPiece === targetPiece.toUpperCase();
@@ -854,6 +924,9 @@ const Chessboard: React.FC<ChessboardProps> = ({
               targetPiece,
             ],
           }));
+          playSound(targetPiece, true); // Play capture sound
+        } else {
+          playSound(game.getPiece(selectedSquare)); // Play move sound
         }
 
         setBoardState(JSON.parse(JSON.stringify(game.board)));
@@ -922,6 +995,15 @@ const Chessboard: React.FC<ChessboardProps> = ({
     );
 
     if (moveResult) {
+      // Play sound effects
+      const targetPiece = game.getPiece(promotionSquare);
+      if (targetPiece && targetPiece !== " ") {
+        playSound(null, true); // Play capture sound
+      } else {
+        playSound(promotionPiece); // Play promotion piece sound
+      }
+
+      playSound(promotionPiece); // Play promotion sound
       setBoardState(JSON.parse(JSON.stringify(game.board)));
       setSelectedSquare(null);
       setPossibleMoves([]);
@@ -1340,14 +1422,53 @@ const Chessboard: React.FC<ChessboardProps> = ({
                   className="flex-grow overflow-y-auto mb-4 custom-scrollbar"
                 >
                   <div className="space-y-2">
-                    {chatMessages.map((message, index) => (
-                      <div
-                        key={index}
-                        className="text-sm text-gray-200 break-words"
-                      >
-                        {message}
-                      </div>
-                    ))}
+                    {chatMessages.map((message, index) => {
+                      // Handle move messages
+                      if (message.includes("moved:")) {
+                        const [username, moveInfo] = message.split(" moved: ");
+                        // Set color based on who made the move
+                        const isWhiteMove =
+                          username === playerInfo.white.username;
+
+                        return (
+                          <div key={index} className="text-sm break-words">
+                            <span className="font-bold">{username}</span> moved:
+                            <span
+                              className={`ml-1 px-1.5 py-0.5 rounded ${
+                                isWhiteMove
+                                  ? "bg-gray-100 text-gray-900" // White player's moves
+                                  : "bg-gray-800 text-white" // Black player's moves
+                              }`}
+                            >
+                              {moveInfo}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      // Handle chat messages
+                      if (message.includes(":")) {
+                        const [username, text] = message.split(":");
+                        return (
+                          <div
+                            key={index}
+                            className="text-sm text-gray-200 break-words"
+                          >
+                            <span className="font-bold">{username}</span>:{text}
+                          </div>
+                        );
+                      }
+
+                      // Default message rendering
+                      return (
+                        <div
+                          key={index}
+                          className="text-sm text-gray-200 break-words"
+                        >
+                          {message}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="flex gap-2 mt-auto">
