@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import ThemeSettings from "./ThemeSettings";
 import Link from "next/link";
-import { ChessGame, PieceSymbol, Square } from "@/app/utils/chess";
+import { ChessGame, PieceSymbol, Square, validateFen } from "@/app/utils/chess";
 import WebSocketClient from "@/app/lib/websocket";
 import { useTheme } from "@/context/ThemeContext";
 
@@ -233,7 +233,7 @@ const PromotionOverlay = ({
 };
 
 const Chessboard = forwardRef<
-  { resetGame: () => void },
+  { resetGame: () => void; loadFEN: (fen: string) => void },
   Omit<ChessboardProps, "fen" | "setLastMove" | "gameMode">
 >(({ maxSize = 1000, minSize = 400, className = "" }, ref) => {
   const [boardSize, setBoardSize] = useState<number>(0);
@@ -408,6 +408,28 @@ const Chessboard = forwardRef<
       return () => clearInterval(timer);
     }
   }, [activeTimer, selectedTimeOption, isCheckmate]);
+
+  // Add event listener for FEN updates
+  useEffect(() => {
+    const handleFenApplied = (e: Event) => {
+      const fenEvent = e as CustomEvent;
+      if (fenEvent.detail) {
+        game.current.loadFEN(fenEvent.detail);
+        setBoardState(game.current.board);
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+        setIsCheckmate(false);
+        setTimeOutWinner(null);
+        setCapturedPieces({ white: [], black: [] });
+        setActiveTimer(game.current.turn === "w" ? "white" : "black");
+      }
+    };
+    
+    document.addEventListener('fen-applied', handleFenApplied);
+    return () => {
+      document.removeEventListener('fen-applied', handleFenApplied);
+    };
+  }, []);
 
   const playSound = (
     piece: PieceSymbol | " " | null,
@@ -597,8 +619,21 @@ const Chessboard = forwardRef<
     game.current = newGame;
   };
 
+  const loadFEN = (fen: string) => {
+    game.current.loadFEN(fen);
+    setBoardState(game.current.board);
+    setSelectedSquare(null);
+    setPossibleMoves([]);
+    setIsCheckmate(false);
+    setTimeOutWinner(null);
+    setCapturedPieces({ white: [], black: [] });
+    setActiveTimer(game.current.turn === "w" ? "white" : "black");
+  };
+
+  // Update useImperativeHandle to expose loadFEN
   useImperativeHandle(ref, () => ({
     resetGame,
+    loadFEN,
   }));
 
   return (
@@ -819,6 +854,60 @@ const Chessboard = forwardRef<
 const LocalGame = () => {
   const chessboardRef = useRef<{ resetGame: () => void }>(null);
   const gameRef = useRef(new ChessGame()); // Add game reference
+  const [fenInput, setFenInput] = useState<string>("");
+  const [fenError, setFenError] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState<boolean>(false);
+
+  // Common chess positions as FEN strings
+  const fenPresets = [
+    { name: "Initial Position", fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" },
+    { name: "Sicilian Defense", fen: "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2" },
+    { name: "Queen's Gambit", fen: "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq d3 0 2" },
+    { name: "Ruy Lopez", fen: "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3" },
+    { name: "Scholar's Mate", fen: "rnbqkbnr/ppp2ppp/3p4/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR b KQkq - 1 3" },
+  ];
+
+  const applyFen = () => {
+    try {
+      // Validate FEN format
+      const validation = validateFen(fenInput);
+      if (!validation.ok) {
+        setFenError(validation.error || "Invalid FEN format");
+        return;
+      }
+      
+      // Reset the game state
+      if (chessboardRef.current) {
+        chessboardRef.current.resetGame();
+      }
+      
+      // Load the new FEN
+      gameRef.current.loadFEN(fenInput);
+      
+      // Update board state
+      if (chessboardRef.current) {
+        // Force a refresh of the board
+        const event = new CustomEvent('fen-applied', { detail: fenInput });
+        document.dispatchEvent(event);
+      }
+      
+      setFenError(null);
+    } catch (error) {
+      setFenError("Error applying FEN: " + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  const copyCurrentFen = () => {
+    const currentFen = gameRef.current.toFEN();
+    navigator.clipboard.writeText(currentFen)
+      .then(() => {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+      })
+      .catch(() => {
+        setFenError("Failed to copy FEN to clipboard");
+      });
+  };
 
   return (
     <div className="flex flex-col lg:flex-row w-full h-full lg:h-[85vh] mb-[5vh] px-4 mt-[3vh] lg:mt-[0vh] justify-center items-start relative z-50 lg:gap-x-[2vh] mx-auto">
@@ -840,6 +929,67 @@ const LocalGame = () => {
           <div className="mb-[2vh]">
             <div className="w-full justify-center items-center flex flex-row">
               <ThemeSettings />
+            </div>
+            
+            {/* FEN Input Section */}
+            <div className="w-full mt-6">
+              <h3 className="text-[2vh] font-semibold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                FEN Position
+              </h3>
+              
+              {/* FEN Input Field */}
+              <div className="flex flex-col gap-2 mb-4">
+                <input
+                  type="text"
+                  value={fenInput}
+                  onChange={(e) => {
+                    setFenInput(e.target.value);
+                    setFenError(null);
+                  }}
+                  placeholder="Enter FEN string"
+                  className="w-full px-3 py-2 bg-gray-900/80 rounded-lg border-[0.2vh] border-purple-500/40 text-white placeholder-gray-400 text-sm"
+                />
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={applyFen}
+                    className="flex-1 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 border-[0.2vh] border-purple-500/50 rounded-lg text-purple-300 text-sm transition-all duration-300"
+                  >
+                    Apply FEN
+                  </button>
+                  <button
+                    onClick={copyCurrentFen}
+                    className="flex-1 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 border-[0.2vh] border-blue-500/50 rounded-lg text-blue-300 text-sm transition-all duration-300"
+                  >
+                    {copySuccess ? "Copied!" : "Copy Current FEN"}
+                  </button>
+                </div>
+                
+                {fenError && (
+                  <div className="text-red-400 text-sm mt-1 px-2 py-1 bg-red-500/10 rounded border border-red-500/30">
+                    {fenError}
+                  </div>
+                )}
+              </div>
+              
+              {/* FEN Presets */}
+              <div className="mb-4">
+                <h4 className="text-[1.8vh] font-medium text-purple-300 mb-2">Common Positions</h4>
+                <div className="grid grid-cols-1 gap-2 max-h-[20vh] overflow-y-auto pr-2 custom-scrollbar">
+                  {fenPresets.map((preset, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        setFenInput(preset.fen);
+                        setFenError(null);
+                      }}
+                      className="w-full text-left px-3 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 border-[0.2vh] border-purple-500/30 hover:border-purple-500/50 rounded-lg text-purple-300 text-sm transition-all duration-300"
+                    >
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -864,6 +1014,24 @@ const LocalGame = () => {
           </div>
         </div>
       </div>
+      
+      {/* Custom scrollbar styles */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(75, 0, 130, 0.1);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(147, 51, 234, 0.5);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(147, 51, 234, 0.7);
+        }
+      `}</style>
     </div>
   );
 };
