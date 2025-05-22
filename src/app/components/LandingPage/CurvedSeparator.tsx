@@ -102,7 +102,7 @@ const CurvedSeparator = () => {
                 }}
               >
                 <img
-                  src={`/logos/${logo.file}`}
+                  src={`/tool_logos/${logo.file}`}
                   alt={logo.name}
                   className="object-contain transition-all duration-300 group-hover:scale-110"
                   style={{ height: "6vh", width: "6vh" }}
