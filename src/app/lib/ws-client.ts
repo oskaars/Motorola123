@@ -22,7 +22,7 @@ export class UciWebSocketClient {
   private commandCounter = 0;
   private connectionLostHandler: (() => void) | null = null;
 
-  constructor(private enginePath: string, private serverUrl = 'ws://127.0.0.1:3100/ws') {}
+  constructor(private enginePath: string, private serverUrl = 'ws://ai.gambit.plus') {}
 
   public onConnectionLost(callback: () => void): void {
     this.connectionLostHandler = callback;
