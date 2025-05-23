@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { ChessGame } from '@/app/utils/chess';
 import { UciWebSocketClient, TimeControlParams } from '@/app/lib/ws-client';
 
-const engineBridge = new UciWebSocketClient('', 'ws://127.0.0.1:3100/ws');
+const engineBridge = new UciWebSocketClient('', 'ws://ai.gambit.plus');
 
 export default async function handler(
   req: NextApiRequest,
