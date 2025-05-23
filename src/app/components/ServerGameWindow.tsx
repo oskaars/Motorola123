@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import ServerChessboard from "./ServerChessboard";
 import ThemeSettings from "./ThemeSettings";
 import Link from "next/link";
@@ -109,25 +109,14 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
   }, [serverClient, inGame, connectionLost]);
 
 
-  useEffect(() => {
-    if (clockRunning && game) {
-      startClock(game.turn);
-    } else {
-      stopClock();
+  const stopClock = () => {
+    if (clockIntervalRef.current) {
+      clearInterval(clockIntervalRef.current);
+      clockIntervalRef.current = null;
     }
+  };
 
-    return () => stopClock();
-  }, [clockRunning, game, game.turn, serverClient, startClock]);
-
-  useEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop =
-        messagesContainerRef.current.scrollHeight;
-    }
-  }, [gameMessages]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const startClock = (player: "w" | "b") => {
+  const startClock = useCallback((player: "w" | "b") => {
     stopClock();
     currentPlayerRef.current = player;
 
@@ -158,13 +147,57 @@ const ServerGameWindow = ({ initialSettings }: ServerGameWindowProps) => {
         });
       }
     }, 100);
-  };
+  }, [stopClock]); // Add stopClock as dependency
 
-  const stopClock = () => {
-    if (clockIntervalRef.current) {
-      clearInterval(clockIntervalRef.current);
-      clockIntervalRef.current = null;
+  useEffect(() => {
+    if (clockRunning && game) {
+      startClock(game.turn);
+    } else {
+      stopClock();
     }
+
+    return () => stopClock();
+  }, [clockRunning, game, startClock, stopClock]);
+
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+  }, [gameMessages]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const startClockDeprecated = (player: "w" | "b") => {
+    stopClock();
+    currentPlayerRef.current = player;
+
+    clockIntervalRef.current = setInterval(() => {
+      if (player === "w") {
+        setWhiteTime((prev) => {
+          if (prev <= 0) {
+            stopClock();
+            setGameMessages((prev) => [
+              ...prev,
+              "Time's up! Black wins on time.",
+            ]);
+            return 0;
+          }
+          return prev - 0.1;
+        });
+      } else {
+        setBlackTime((prev) => {
+          if (prev <= 0) {
+            stopClock();
+            setGameMessages((prev) => [
+              ...prev,
+              "Time's up! White wins on time.",
+            ]);
+            return 0;
+          }
+          return prev - 0.1;
+        });
+      }
+    }, 100);
   };
 
   const handleStartGame = async () => {

@@ -8,7 +8,7 @@ const GradientBackground = () => {
       {/* SVG filter for the gooey effect */}
       <svg className="hidden">
         <filter id="goo">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="60" result="blur" />
+          <feGaussianBlur in="SourceGraphic" stdDeviation="40" result="blur" />
           <feColorMatrix
             in="blur"
             mode="matrix"
@@ -17,11 +17,12 @@ const GradientBackground = () => {
         </filter>
       </svg>
 
-      {/* Gradient container */}
-      <div className="absolute inset-0">
-        {/* Dark background */}
-        <div className="absolute inset-0" />
+      {/* Firefox fallback: blurred static gradient */}
+      <div className="firefox-only" />
 
+      {/* Chrome / other browsers: full animated gooey background */}
+      <div className="not-firefox">
+        <div className="absolute inset-0" />
         <div
           className="absolute inset-0 opacity-90"
           style={{
@@ -29,7 +30,6 @@ const GradientBackground = () => {
             background: "linear-gradient(40deg, #1e0033, #0a011a)",
           }}
         >
-          {/* Gradient 1 - Vertical Movement */}
           <div
             className="absolute h-[150%] w-[150%] rounded-full mix-blend-hard-light"
             style={{
@@ -40,8 +40,6 @@ const GradientBackground = () => {
               animation: "moveVertical 28s ease infinite alternate",
             }}
           />
-
-          {/* Gradient 2 - Circle Movement Reverse */}
           <div
             className="absolute h-[80%] w-[80%] rounded-full mix-blend-hard-light"
             style={{
@@ -54,8 +52,6 @@ const GradientBackground = () => {
                 "moveCircleReverse 32s ease-in-out infinite alternate-reverse",
             }}
           />
-
-          {/* Gradient 3 - Circle Movement */}
           <div
             className="absolute h-[70%] w-[70%] rounded-full mix-blend-hard-light"
             style={{
@@ -67,8 +63,6 @@ const GradientBackground = () => {
               animation: "moveCircle 38s linear infinite alternate",
             }}
           />
-
-          {/* Gradient 4 - Horizontal Movement */}
           <div
             className="absolute h-[100%] w-[100%] rounded-full mix-blend-hard-light"
             style={{
@@ -79,8 +73,6 @@ const GradientBackground = () => {
               animation: "moveHorizontal 45s ease infinite alternate-reverse",
             }}
           />
-
-          {/* Additional Gradient 5 - Diagonal Movement */}
           <div
             className="absolute h-[60%] w-[60%] rounded-full mix-blend-hard-light"
             style={{
@@ -94,7 +86,6 @@ const GradientBackground = () => {
         </div>
       </div>
 
-      {/* Global animations */}
       <style jsx global>{`
         @keyframes moveCircle {
           0% {
@@ -157,6 +148,43 @@ const GradientBackground = () => {
           100% {
             transform: translateX(-30%) translateY(-30%) scale(1);
           }
+        }
+
+        /* Firefox-specific fallback styles */
+        @supports (-moz-orient: inline) {
+          .not-firefox {
+            display: none !important;
+          }
+
+          .firefox-only {
+            display: block !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                circle at 20% 40%,
+                rgba(147, 51, 234, 0.4) 0%,
+                rgba(147, 51, 234, 0) 60%
+              ),
+              radial-gradient(
+                circle at 60% 60%,
+                rgba(192, 132, 252, 0.4) 0%,
+                rgba(192, 132, 252, 0) 60%
+              ),
+              linear-gradient(40deg, #1e0033, #0a011a);
+            background-blend-mode: screen;
+            filter: blur(40px);
+            z-index: -1;
+          }
+        }
+
+        /* Hide Firefox fallback in other browsers */
+        .firefox-only {
+          display: none;
         }
       `}</style>
     </div>

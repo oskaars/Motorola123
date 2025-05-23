@@ -26,6 +26,6 @@ export default function RootLayout({
 }
 
 export const metadata = {
-  title: "Gambit.pl",
+  title: "Gambit.plus",
   description: "Motorola Science Cup 2025 Project",
 };
